@@ -1,0 +1,37 @@
+import dotenv from "dotenv";
+import express from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import errorHandler from "./middlewares/errorHandler.js";
+import notFoundPage from "./middlewares/notFoundPage.js";
+import connectToDb from "./db/connectToDb.js";
+import mongoose from "mongoose";
+dotenv.config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+connectToDb()
+app.use(express.json())
+app.use(express.static(path.join(__dirname , "public")))
+
+app.get("/" , ( req , res) =>{
+    res.sendFile(path.join(__dirname , "./views/root.html"))
+})
+
+app.use(notFoundPage)
+
+mongoose.connection.once("open" , () =>{
+    console.log("connect to db is success")
+    app.listen(PORT , () =>{
+        console.log("server is running on Port 5000")
+    })
+})
+mongoose.connection.on("error" , (err) =>{
+    console.error(err)
+})
+
+
+app.use(errorHandler)
