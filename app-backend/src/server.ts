@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import express from "express";
+import express, { type Request, type Response } from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import errorHandler from "./middlewares/errorHandler.js";
@@ -23,6 +23,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "./views/root.html"));
 });
+
 app.use("/auth", authRoute);
 
 app.use(notFoundPage);

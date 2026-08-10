@@ -9,7 +9,7 @@ const connectToDb = async () => {
     );
   }
 
-  await mongoose.connect(process.env.DB_URL , {dbName : "appointment"});
+  await mongoose.connect(process.env.DB_URL, { dbName: "appointment" });
 };
 
 export default connectToDb;
