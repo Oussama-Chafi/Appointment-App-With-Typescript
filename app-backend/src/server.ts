@@ -8,6 +8,8 @@ import connectToDb from "./db/connectToDb.js";
 import mongoose from "mongoose";
 import authRoute from "./routes/authRoute.js";
 import cookieParser from "cookie-parser";
+import doctorsRoute from "./routes/doctorsRoute.js";
+import adminRoute from "./routes/adminRoute.js";
 dotenv.config();
 
 const app = express();
@@ -25,6 +27,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/auth", authRoute);
+app.use("/admin", adminRoute);
+app.use("/doctors", doctorsRoute);
 
 app.use(notFoundPage);
 

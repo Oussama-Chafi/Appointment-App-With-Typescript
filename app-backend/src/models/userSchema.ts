@@ -1,12 +1,5 @@
 import mongoose from "mongoose";
-
-type UserTypes = {
-  first_name: string;
-  last_name: string;
-  email: string;
-  password: string;
-  role: string;
-};
+import type { UserTypes } from "../types/app.js";
 
 const userSchema = new mongoose.Schema<UserTypes>(
   {

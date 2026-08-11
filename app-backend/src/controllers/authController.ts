@@ -23,7 +23,7 @@ export const register = async (req: Request, res: Response) => {
       error.details[0]?.message || "you should add all information",
     );
   }
-  const { first_name, last_name, email, password } = value;
+  const { first_name, last_name, email, password, role } = value;
 
   const isEmailExist = await User.findOne({ email });
   if (isEmailExist) {
@@ -38,6 +38,7 @@ export const register = async (req: Request, res: Response) => {
     last_name,
     email,
     password: hashPassword,
+    role,
   });
 
   res.status(201).json({
