@@ -1,5 +1,5 @@
 import { type Request, type Response } from "express";
-import { Doctor } from "../models/doctorSchmea.js";
+import { Doctor } from "../models/doctorSchema.js";
 import { AppError } from "../utils/AppError.js";
 import User from "../models/userSchema.js";
 

@@ -35,10 +35,9 @@ export interface IDoctroSchema extends Document {
   phone: string;
   specialty: string;
   address: string;
-  consultationFree: number;
-  availableDayes: string[];
-  startTime: string;
-  endTime: string;
+  consultationFee: number;
+  // availableDayes: string[];
+ 
   isAcceptingAppointments: boolean;
   status: string;
 }
@@ -51,3 +50,11 @@ export interface IDoctroSchema extends Document {
 //     startTime ?: string;
 //     endTime ?: string;
 // }
+
+export interface ISlotSchemaType extends Document {
+  doctorID : mongoose.Types.ObjectId;
+  date : string;
+  startTime: string;
+  endTime: string;
+  isBooked : boolean;
+}
