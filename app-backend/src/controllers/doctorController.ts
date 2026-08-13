@@ -42,45 +42,53 @@ export const applyAsDoctor = async (req: Request, res: Response) => {
 };
 
 export const addDoctorSlots = async (req: Request, res: Response) => {
-  const { error, value } = addDoctorSlotsVali.validate(req.body);
+  const { error } = addDoctorSlotsVali.validate(req.body);
   if (error) {
     throw new AppError(
       400,
       error.details[0]?.message || "All fields are required!",
     );
   }
-  const { date, startTime, endTime } = value;
+  const { date, startTime, endTime, excludedSlots } = req.body;
   const doctorID = req.user?.id;
-  console.log(date);
-  const inputDate = new Date(date);
+  if (!doctorID) {
+    throw new AppError(400, "This User is Unthenticated.");
+  }
+  const findDoc = await Doctor.findOne({ userID: doctorID });
+  if (!findDoc) {
+    throw new AppError(400, "Doctor Profile not found.");
+  }
+  const currentDate = new Date(date);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  console.log(inputDate);
-  console.log(inputDate.getTime());
-  if (isNaN(inputDate.getTime()) || inputDate < today) {
-    throw new AppError(400, "Cannot create slots for past dates !");
+  if (isNaN(currentDate.getTime()) || currentDate < today) {
+    throw new AppError(400, "Cannot create slots to past dates!");
   }
-  if (!doctorID) {
-    throw new AppError(401, "This Doctor is not Authenticated !");
-  }
-  const findDoc = await Doctor.findOne({ userID: doctorID }).exec();
-  if (!findDoc) {
-    throw new AppError(401, "Doctor Profile not found !");
-  }
-  const createSlot = await DocSlot.create({
-    doctorID,
-    date,
-    startTime,
-    endTime,
-  });
-  const doctorResult = await createSlot.populate(
-    "doctorID",
-    "phone specialty consultationFee isAcceptingAppointments",
-  );
+  const slotsToInsert = [];
+  let startHour = parseInt(startTime.split(":")[0]);
+  let endHour = parseInt(endTime.split(":")[0]);
+  const safeExcludedSlotsArray = Array.isArray(excludedSlots)
+    ? excludedSlots
+    : [];
 
+  while (startHour < endHour) {
+    const slotStart = `${startHour.toString().padStart(2, "0")}:00`;
+    const slotEnd = `${(startHour + 1).toString().padStart(2, "0")}:00`;
+    if (!safeExcludedSlotsArray.includes(slotStart)) {
+      slotsToInsert.push({
+        doctorID,
+        date,
+        startTime: slotStart,
+        endTime: slotEnd,
+      });
+    }
+    startHour++;
+  }
+  const createSlots = await DocSlot.insertMany(slotsToInsert);
   res.status(201).json({
     success: true,
-    message: "Your Slots are created Successfully.",
-    doctorResult,
+    message: "Slots created Successfully.",
+    slotsLength: createSlots.length,
+    createSlots,
   });
 };
