@@ -92,3 +92,20 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
     createSlots,
   });
 };
+
+export const getAvailableSlots = async (req: Request, res: Response) => {
+  const dateFu = new Date().toISOString().split("T")[0];
+  console.log(dateFu);
+  const availableSlots = await DocSlot.find({
+    date: { $gte: dateFu as string },
+    isBooked: false,
+  });
+  if (availableSlots.length === 0) {
+    throw new AppError(404, "No Slots found .");
+  }
+  res.status(200).json({
+    success: true,
+    message: "All slots available retrieved successfully.",
+    data: availableSlots,
+  });
+};
