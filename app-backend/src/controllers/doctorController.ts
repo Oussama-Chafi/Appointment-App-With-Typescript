@@ -6,6 +6,7 @@ import {
 import { AppError } from "../utils/AppError.js";
 import { Doctor } from "../models/doctorSchema.js";
 import DocSlot from "../models/slotSchema.js";
+import Appointment from "../models/appointmentSchema.js";
 
 export const applyAsDoctor = async (req: Request, res: Response) => {
   const { error, value } = applyAsDoctorVali.validate(req.body);
@@ -121,3 +122,31 @@ export const getAvailableSlots = async (req: Request, res: Response) => {
     data: availableSlots,
   });
 };
+
+export const getDoctorAppointments = async (req : Request , res : Response) =>{
+
+  const userID = req.user?.id
+  if(!userID){
+    throw new AppError(401 , "You should Log in first.")
+  }
+  const findDoc = await Doctor.findOne({userID}).exec();
+  if(!findDoc){
+    throw new AppError(404 , "Doctor Profile not found!")
+  };
+  const docAppointment = await Appointment.find({
+    doctorID : findDoc._id,
+  }).populate([
+    {path : "patientID" , select : "first_name last_name email"},
+    {path : "slotID" , select : "date startTime endTime"}
+  ]).exec()
+  if(docAppointment.length === 0){
+    throw new AppError(404 , "You have no Appointment booked yet.")
+  }
+
+  res.status(200).json({
+    success : true,
+    message : "This is all your Appointments",
+    appointmentsLength : docAppointment.length,
+    data : docAppointment
+  })
+}
