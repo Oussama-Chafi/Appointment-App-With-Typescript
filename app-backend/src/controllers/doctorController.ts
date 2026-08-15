@@ -25,6 +25,7 @@ export const applyAsDoctor = async (req: Request, res: Response) => {
     throw new AppError(400, " you have already send a Request");
   }
 
+  console.log(typeof userID);
   const newDoctorRequest = await Doctor.create({
     userID,
     address,
@@ -33,6 +34,9 @@ export const applyAsDoctor = async (req: Request, res: Response) => {
     phone,
     // status : "pending"
   });
+
+  await newDoctorRequest.populate("userID", "first_name last_name email");
+
   res.status(201).json({
     success: true,
     message:
@@ -76,7 +80,7 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
     const slotEnd = `${(startHour + 1).toString().padStart(2, "0")}:00`;
     if (!safeExcludedSlotsArray.includes(slotStart)) {
       slotsToInsert.push({
-        doctorID,
+        doctorID: findDoc._id,
         date,
         startTime: slotStart,
         endTime: slotEnd,
@@ -85,6 +89,15 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
     startHour++;
   }
   const createSlots = await DocSlot.insertMany(slotsToInsert);
+  await DocSlot.populate(createSlots, {
+    path: "doctorID",
+    select: "phone specialty address consultationFee userID",
+    populate: {
+      path: "userID",
+      select: "first_name last_name email",
+    },
+  });
+
   res.status(201).json({
     success: true,
     message: "Slots created Successfully.",
@@ -94,10 +107,9 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
 };
 
 export const getAvailableSlots = async (req: Request, res: Response) => {
-  const dateFu = new Date().toISOString().split("T")[0];
-  console.log(dateFu);
+  const today = new Date().toISOString().split("T")[0];
   const availableSlots = await DocSlot.find({
-    date: { $gte: dateFu as string },
+    date: { $gte: today as string },
     isBooked: false,
   });
   if (availableSlots.length === 0) {

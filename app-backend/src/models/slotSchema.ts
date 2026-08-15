@@ -26,6 +26,6 @@ const slotSchema = new mongoose.Schema<ISlotSchemaType>({
   },
 });
 
-const DocSlot = mongoose.model("DocSlots", slotSchema);
+const DocSlot = mongoose.model("DocSlot", slotSchema);
 
 export default DocSlot;

@@ -38,6 +38,9 @@ export const updateDoctorStatus = async (req: Request, res: Response) => {
     const updateRole = await User.findByIdAndUpdate(findDocReq.userID, {
       role: "doctor",
     });
+
+    await findDocReq.populate("userID", "first_name last_name email");
+
     return res.status(200).json({
       success: true,
       message: `Doctor request has been successfully ${status}`,
