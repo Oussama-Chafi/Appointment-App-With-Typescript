@@ -85,3 +85,38 @@ export const getMyAppointment = async (req: Request, res: Response) => {
     data: myAppointment,
   });
 };
+
+export const cancelAppointment = async (req: Request, res: Response) => {
+  const appointmentID = req.params.appointmentID as string;
+  if (!appointmentID) {
+    throw new AppError(400, "Please add ID of this Appointment");
+  }
+  const getAppointment = await Appointment.findById(appointmentID).exec();
+  if (!getAppointment) {
+    throw new AppError(404, "There is no Appointment with this ID!");
+  }
+  const patientID = req.user?.id;
+  if (!patientID) {
+    throw new AppError(401, "you should log in first.");
+  }
+  if (getAppointment.patientID.toString() !== patientID) {
+    throw new AppError(
+      403,
+      "You don't have The Premission to cancel this Appointment.",
+    );
+  }
+  if (getAppointment.status !== "cancelled") {
+    getAppointment.status = "cancelled";
+    await getAppointment.save();
+    await DocSlot.findByIdAndUpdate(getAppointment.slotID, {
+      isBooked: false,
+    });
+  } else {
+    throw new AppError(400, "This Appointment is already cancelled.");
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "The Appointment has been cancelled successfully.",
+  });
+};
