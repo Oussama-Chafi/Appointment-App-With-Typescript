@@ -37,9 +37,11 @@ export interface IDoctroSchema extends Document {
   address: string;
   consultationFee: number;
   // availableDayes: string[];
- 
+
   isAcceptingAppointments: boolean;
   status: string;
+  averageRating: number;
+  numOfReviews: number;
 }
 
 // export interface IApplyAsDoctorInput {
@@ -52,9 +54,17 @@ export interface IDoctroSchema extends Document {
 // }
 
 export interface ISlotSchemaType extends Document {
-  doctorID : mongoose.Types.ObjectId;
-  date : string;
+  doctorID: mongoose.Types.ObjectId;
+  date: string;
   startTime: string;
   endTime: string;
-  isBooked : boolean;
+  isBooked: boolean;
+}
+
+export interface IReviewSchema extends Document {
+  patientID: mongoose.Types.ObjectId;
+  doctorID: mongoose.Types.ObjectId;
+  appointmentID: mongoose.Types.ObjectId;
+  rating: number;
+  comment: string;
 }
