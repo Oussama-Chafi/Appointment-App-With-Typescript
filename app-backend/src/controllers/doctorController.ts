@@ -150,3 +150,46 @@ export const getDoctorAppointments = async (req : Request , res : Response) =>{
     data : docAppointment
   })
 }
+
+export const updateAppointmentStatus = async (req : Request , res : Response) =>{
+
+  const appointmentID = req.params.appointmentID as string;
+  const {status} = req.body;
+  if(!["confirmed" , "rejected" , "completed"].includes(status)){
+    throw new AppError(400 , "Add your status for this Appointment!")
+  }
+  const userID = req.user?.id;
+  if(!userID){
+    throw new AppError(401 , "You should Log in first!")
+  }
+  const findDoc = await Doctor.findOne({userID}).exec();
+  
+  if(!findDoc){
+    throw new AppError(404 , "Doctor Profile not found!")
+  }
+  const getAppointment = await Appointment.findById(appointmentID).exec();
+  if(!getAppointment){
+    throw new AppError(404 , "This Appointment not found!")
+  }
+  if(findDoc._id.toString() !== getAppointment.doctorID.toString()){
+    throw new AppError(403 , "You cannot handle the Status of this Appointment.")
+  }
+  
+  if(getAppointment.status === "rejected"){
+    throw new AppError(400 , "You cannot update an Appointment that has already been rejected!")
+  }
+  if(status === "rejected"){
+    await DocSlot.findByIdAndUpdate(getAppointment.slotID , {
+      isBooked : false,
+    })
+  }
+    
+    getAppointment.status = status,
+    await getAppointment.save();
+  
+  res.status(200).json({
+    success : true,
+    message : "The Status has been changed successfully.",
+    data : getAppointment
+  })
+}
