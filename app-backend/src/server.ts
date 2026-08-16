@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+dotenv.config();
 import express, { type Request, type Response } from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,7 +13,8 @@ import doctorsRoute from "./routes/doctorsRoute.js";
 import adminRoute from "./routes/adminRoute.js";
 import appointmentRoute from "./routes/appointmentRoutes.js";
 import reviewsRoute from "./routes/reviewsRoute.js";
-dotenv.config();
+import paymentRoute from "./routes/paymentRoute.js";
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,6 +35,7 @@ app.use("/admin", adminRoute);
 app.use("/doctors", doctorsRoute);
 app.use("/appointment", appointmentRoute);
 app.use("/reviews", reviewsRoute);
+app.use("/payment", paymentRoute);
 app.use(notFoundPage);
 
 mongoose.connection.once("open", () => {
