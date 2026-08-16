@@ -14,7 +14,7 @@ import adminRoute from "./routes/adminRoute.js";
 import appointmentRoute from "./routes/appointmentRoutes.js";
 import reviewsRoute from "./routes/reviewsRoute.js";
 import paymentRoute from "./routes/paymentRoute.js";
-
+import webhookRoute from "./routes/webhookRoute.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +22,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 connectToDb();
+app.use("/payment", webhookRoute);
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
