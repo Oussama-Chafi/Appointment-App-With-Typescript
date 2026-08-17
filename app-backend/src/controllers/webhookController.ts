@@ -1,4 +1,4 @@
-import { type Request, type Response } from "express";
+import type { Request, Response } from "express";
 import { getStripeInstance } from "../config/stripe.js";
 import { AppError } from "../utils/AppError.js";
 import Appointment from "../models/appointmentSchema.js";
@@ -9,7 +9,10 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!sig || !webhookSecret) {
-    throw new AppError(400, "Missing stripe signature or secret");
+    throw new AppError(
+      400,
+      "Missing stripe signature or secret webhook in the env file",
+    );
   }
   let event;
   event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
@@ -21,7 +24,6 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
         payment: true,
         status: "confirmed",
       });
-      console.log(`Appointment ${appointmentID} payment confirmed`);
     }
   }
   res.status(200).json({

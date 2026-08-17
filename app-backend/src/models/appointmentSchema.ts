@@ -2,8 +2,9 @@ import mongoose from "mongoose";
 import User from "./userSchema.js";
 import { Doctor } from "./doctorSchema.js";
 import DocSlot from "./slotSchema.js";
+import type { IAppointmentSchema } from "../types/app.js";
 
-const appointmentSchema = new mongoose.Schema({
+const appointmentSchema = new mongoose.Schema<IAppointmentSchema>({
   patientID: {
     type: mongoose.Types.ObjectId,
     ref: "User",

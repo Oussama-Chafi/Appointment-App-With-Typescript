@@ -36,14 +36,14 @@ const doctorSchema = new mongoose.Schema<IDoctroSchema>(
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    averageRating : {
-      type : Number,
-      default : 0
+    averageRating: {
+      type: Number,
+      default: 0,
     },
-    numOfReviews : {
-      type : Number,
-      default : 0,
-    }
+    numOfReviews: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true },
 );

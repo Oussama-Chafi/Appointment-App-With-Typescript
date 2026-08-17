@@ -26,7 +26,6 @@ export const applyAsDoctor = async (req: Request, res: Response) => {
     throw new AppError(400, " you have already send a Request");
   }
 
-  console.log(typeof userID);
   const newDoctorRequest = await Doctor.create({
     userID,
     address,

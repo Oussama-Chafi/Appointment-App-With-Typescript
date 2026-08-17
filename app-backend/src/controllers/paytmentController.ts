@@ -8,13 +8,13 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
   if (error) {
     throw new AppError(
       400,
-      error.details[0]?.message || "All fields are requied!",
+      error.details[0]?.message || "All fields are required!",
     );
   }
   const { appointmentID, doctorName, price } = req.body;
   const stripe = getStripeInstance();
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card", "klarna", "kr_card"],
+    payment_method_types: ["card"],
     mode: "payment",
     success_url: "http://localhost:3000/booking-success",
     cancel_url: "http://localhost:3000/booking-cancel",

@@ -68,3 +68,12 @@ export interface IReviewSchema extends Document {
   rating: number;
   comment: string;
 }
+
+export interface IAppointmentSchema extends Document {
+  patientID : mongoose.Types.ObjectId;
+  doctorID : mongoose.Types.ObjectId;
+  slotID : mongoose.Types.ObjectId;
+  status : "pending" | "confirmed" | "cancelled" | "completed" | "rejected";
+  payment : boolean;
+  notes : string;
+}

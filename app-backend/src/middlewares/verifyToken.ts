@@ -19,7 +19,6 @@ export const verifyToken = (
     }
     const payload = decoded as CustomPayload;
     req.user = payload.userInfo;
-    // console.log(req.user);
     next();
   });
 };

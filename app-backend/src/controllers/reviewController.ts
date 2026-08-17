@@ -22,15 +22,12 @@ export const createReview = async (req: Request, res: Response) => {
   if (!patientID) {
     throw new AppError(401, "You should Log in first!");
   }
-  // console.log(patientID);
   if (!doctorID) {
     throw new AppError(400, "You should add the Doctor ID !");
   }
-  // console.log(doctorID);
   if (!appointmentID) {
     throw new AppError(400, "You should add the Appointment ID!");
   }
-  // console.log(appointmentID);
   const findAppointment = await Appointment.findById(appointmentID).exec();
   if (!findAppointment) {
     throw new AppError(404, "This Appointment not found.");

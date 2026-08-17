@@ -9,6 +9,8 @@ const router = express();
 
 router.route("/book/:slotID").post(verifyToken, bookAppointment);
 router.route("/my-appointments").get(verifyToken, getMyAppointment);
-router.route("/cancel-appointment/:appointmentID").post(verifyToken , cancelAppointment);
+router
+  .route("/cancel-appointment/:appointmentID")
+  .post(verifyToken, cancelAppointment);
 
 export default router;
