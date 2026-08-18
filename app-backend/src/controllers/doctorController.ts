@@ -7,6 +7,7 @@ import { AppError } from "../utils/AppError.js";
 import { Doctor } from "../models/doctorSchema.js";
 import DocSlot from "../models/slotSchema.js";
 import Appointment from "../models/appointmentSchema.js";
+import { Types } from "mongoose";
 
 export const applyAsDoctor = async (req: Request, res: Response) => {
   const { error, value } = applyAsDoctorVali.validate(req.body);
@@ -107,8 +108,10 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
 };
 
 export const getAvailableSlots = async (req: Request, res: Response) => {
+  const doctorID = req.params.doctorID as string;
   const today = new Date().toISOString().split("T")[0];
   const availableSlots = await DocSlot.find({
+    doctorID,
     date: { $gte: today as string },
     isBooked: false,
   });
@@ -119,6 +122,49 @@ export const getAvailableSlots = async (req: Request, res: Response) => {
     success: true,
     message: "All slots available retrieved successfully.",
     data: availableSlots,
+  });
+};
+
+export const deleteDoctorSlot = async (req: Request, res: Response) => {
+  const slotID = req.params.slotID as string;
+  const userID = req.user?.id as string;
+  const findDoc = await Doctor.findOne({ userID }).exec();
+  if (!findDoc) {
+    throw new AppError(404, "Doctor profile not found.");
+  }
+  const getSlot = await DocSlot.findById(slotID).exec();
+  if (!getSlot) {
+    throw new AppError(404, "This slot not found ");
+  }
+  if (getSlot?.isBooked) {
+    throw new AppError(400, "Cannot delete a slot that is already booked!");
+  }
+  if (findDoc._id.toString() !== getSlot?.doctorID.toString()) {
+    throw new AppError(403, "You cannot delete another doctor's slots!");
+  }
+  await DocSlot.findByIdAndDelete(slotID);
+  res.status(204).send();
+};
+
+export const deleteManyDoctorSlots = async (req: Request, res: Response) => {
+  const { slotIDs } = req.body;
+  const userID = req.user?.id as string;
+  const findDoc = await Doctor.findOne({ userID }).exec();
+  if (!findDoc) {
+    throw new AppError(404, "Doctor profile not found.");
+  }
+  const objectSlotIds = slotIDs.map((id: string) => new Types.ObjectId(id));
+  const result = await DocSlot.deleteMany({
+    _id: { $in: objectSlotIds },
+    doctorID: findDoc._id,
+    isBooked: false,
+  });
+  if (result.deletedCount === 0) {
+    throw new AppError(400, "No eligible unbooked slots were found to delete.");
+  }
+  res.status(200).json({
+    success: true,
+    message: `${result.deletedCount} slots deleted successfully.`,
   });
 };
 

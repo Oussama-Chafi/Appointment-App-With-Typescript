@@ -35,3 +35,9 @@ export const updateDoctorProfileVali = joi
     isAcceptingAppointments: joi.boolean().optional(),
   })
   .unknown(false);
+
+export const deleteManyDocSlotsVali = joi
+  .object({
+    slotIDs: joi.array().items(joi.string().required()).min(1).required(),
+  })
+  .unknown(false);

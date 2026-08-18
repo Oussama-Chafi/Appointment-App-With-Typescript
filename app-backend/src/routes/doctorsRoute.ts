@@ -3,6 +3,8 @@ import { allowedTo, verifyToken } from "../middlewares/verifyToken.js";
 import {
   addDoctorSlots,
   applyAsDoctor,
+  deleteDoctorSlot,
+  deleteManyDoctorSlots,
   getAvailableSlots,
   getDoctorAppointments,
   getDoctorProfile,
@@ -10,7 +12,10 @@ import {
   updateDoctorProfile,
 } from "../controllers/doctorController.js";
 import { validateBody } from "../middlewares/validationData.js";
-import { updateDoctorProfileVali } from "../validation/doctorValidation.js";
+import {
+  deleteManyDocSlotsVali,
+  updateDoctorProfileVali,
+} from "../validation/doctorValidation.js";
 const router = express();
 
 router.route("/app-as-doctor").post(verifyToken, applyAsDoctor);
@@ -35,5 +40,16 @@ router
     verifyToken,
     allowedTo("doctor"),
     updateDoctorProfile,
+  );
+router
+  .route("/delete-slot")
+  .delete(verifyToken, allowedTo("doctor"), deleteDoctorSlot);
+router
+  .route("/delete-many-slots")
+  .delete(
+    validateBody(deleteManyDocSlotsVali),
+    verifyToken,
+    allowedTo("doctor"),
+    deleteManyDoctorSlots,
   );
 export default router;
