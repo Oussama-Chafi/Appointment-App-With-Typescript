@@ -198,3 +198,58 @@ export const updateAppointmentStatus = async (req: Request, res: Response) => {
     data: getAppointment,
   });
 };
+
+export const getDoctorProfile = async (req: Request, res: Response) => {
+  const doctorID = req.params.doctorID as string;
+  if (!doctorID) {
+    throw new AppError(400, "You should add the Doctor ID first.");
+  }
+  const getProfile = await Doctor.findById(doctorID)
+    .populate("userID", "first_name last_name email")
+    .exec();
+  if (!getProfile) {
+    throw new AppError(404, "Doctor Profile not found!");
+  }
+  res.status(200).json({
+    success: true,
+    data: getProfile,
+  });
+};
+
+export const updateDoctorProfile = async (req: Request, res: Response) => {
+  const doctorID = req.params.doctorID as string;
+  if (!doctorID) {
+    throw new AppError(400, "You should add the Doctor ID first!");
+  }
+  const userID = req.user?.id as string;
+  const findDoc = await Doctor.findOne({ userID }).exec();
+  if (!findDoc) {
+    throw new AppError(404, "Doctor profile not found.");
+  }
+  if (doctorID !== findDoc._id.toString()) {
+    throw new AppError(403, "you cannot update another doctor's profile");
+  }
+  if (req.body.status) {
+    throw new AppError(403, "Only admin can update the status of you.");
+  }
+  if (req.body.averageRating || req.body.numOfReviews) {
+    throw new AppError(
+      400,
+      "You can't update the rating and the number of reviews!",
+    );
+  }
+  const updateProfile = await Doctor.findByIdAndUpdate(
+    doctorID,
+    { $set: req.body },
+    { new: true, runValidators: true },
+  );
+  if (!updateProfile) {
+    throw new AppError(404, "Doctor profile not found!");
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Doctor profile updated successfully",
+    data: updateProfile,
+  });
+};
