@@ -7,6 +7,7 @@ import errorHandler from "./middlewares/errorHandler.js";
 import notFoundPage from "./middlewares/notFoundPage.js";
 import connectToDb from "./db/connectToDb.js";
 import mongoose from "mongoose";
+import cors from "cors";
 import authRoute from "./routes/authRoute.js";
 import cookieParser from "cookie-parser";
 import doctorsRoute from "./routes/doctorsRoute.js";
@@ -15,6 +16,7 @@ import appointmentRoute from "./routes/appointmentRoutes.js";
 import reviewsRoute from "./routes/reviewsRoute.js";
 import paymentRoute from "./routes/paymentRoute.js";
 import webhookRoute from "./routes/webhookRoute.js";
+import corsOptions from "./config/corsOptions.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +24,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 connectToDb();
+app.use(cors(corsOptions));
 app.use("/payment", webhookRoute);
 app.use(express.json());
 app.use(cookieParser());
