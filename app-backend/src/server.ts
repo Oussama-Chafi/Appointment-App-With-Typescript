@@ -8,6 +8,7 @@ import notFoundPage from "./middlewares/notFoundPage.js";
 import connectToDb from "./db/connectToDb.js";
 import mongoose from "mongoose";
 import cors from "cors";
+import helmet from "helmet";
 import authRoute from "./routes/authRoute.js";
 import cookieParser from "cookie-parser";
 import doctorsRoute from "./routes/doctorsRoute.js";
@@ -24,6 +25,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 connectToDb();
+app.use(helmet())
 app.use(cors(corsOptions));
 app.use("/payment", webhookRoute);
 app.use(express.json());
