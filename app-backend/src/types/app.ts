@@ -8,6 +8,9 @@ export type UserTypes = {
   email: string;
   password: string;
   role: string;
+  verificationToken?: string | null;
+  verificationTokenExpiry?: Date | null;
+  isVerified: boolean;
 };
 
 export interface CustomPayload extends JwtPayload {
@@ -70,10 +73,16 @@ export interface IReviewSchema extends Document {
 }
 
 export interface IAppointmentSchema extends Document {
-  patientID : mongoose.Types.ObjectId;
-  doctorID : mongoose.Types.ObjectId;
-  slotID : mongoose.Types.ObjectId;
-  status : "pending" | "confirmed" | "cancelled" | "completed" | "rejected";
-  payment : boolean;
-  notes : string;
+  patientID: mongoose.Types.ObjectId;
+  doctorID: mongoose.Types.ObjectId;
+  slotID: mongoose.Types.ObjectId;
+  status: "pending" | "confirmed" | "cancelled" | "completed" | "rejected";
+  payment: boolean;
+  notes: string;
 }
+
+export type OptionEmailType = {
+  to: string | string[];
+  subject: string;
+  html: string;
+};

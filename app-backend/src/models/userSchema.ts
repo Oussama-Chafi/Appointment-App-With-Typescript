@@ -19,6 +19,18 @@ const userSchema = new mongoose.Schema<UserTypes>(
       type: String,
       required: true,
     },
+    verificationToken: {
+      type: String,
+      default: null,
+    },
+    verificationTokenExpiry: {
+      type: Date,
+      default: null,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
     role: {
       type: String,
       enum: ["patient", "doctor", "admin"],

@@ -13,8 +13,8 @@ import User from "../models/userSchema.js";
 import bcrypt from "bcrypt";
 import jwt, { type JwtPayload, type VerifyErrors } from "jsonwebtoken";
 import type { CustomPayload } from "../types/app.js";
-import { userInfo } from "node:os";
-
+import crypto from "crypto";
+import sendEmail from "../utils/SendEmail.js";
 export const register = async (req: Request, res: Response) => {
   const { error, value } = registerValidation.validate(req.body);
   if (error) {
@@ -32,13 +32,28 @@ export const register = async (req: Request, res: Response) => {
       "This Account is Exist already! please try with another Email",
     );
   }
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+
   const hashPassword = await bcrypt.hash(password, 10);
+
+  const verificationUrl = `http://localhost:3000/auth/verify-email?token=${verificationToken}`;
+
+  await sendEmail(
+    email,
+    "Email verification",
+    ` <h1>confirm your Email</h1>
+      <a href = "${verificationUrl}" >click here</a>
+    `,
+  );
+
   const addUser = await User.create({
     first_name,
     last_name,
     email,
     password: hashPassword,
     role,
+    verificationToken,
+    verificationTokenExpiry: Date.now() + 24 * 60 * 60 * 1000,
   });
 
   res.status(201).json({
