@@ -18,6 +18,7 @@ import reviewsRoute from "./routes/reviewsRoute.js";
 import paymentRoute from "./routes/paymentRoute.js";
 import webhookRoute from "./routes/webhookRoute.js";
 import corsOptions from "./config/corsOptions.js";
+import { authLimiter, globalLimiter } from "./middlewares/rateLimiter.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,8 +26,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 connectToDb();
-app.use(helmet())
+app.use(helmet());
 app.use(cors(corsOptions));
+app.use(globalLimiter);
 app.use("/payment", webhookRoute);
 app.use(express.json());
 app.use(cookieParser());
@@ -36,7 +38,7 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "./views/root.html"));
 });
 
-app.use("/auth", authRoute);
+app.use("/auth", authLimiter, authRoute);
 app.use("/admin", adminRoute);
 app.use("/doctors", doctorsRoute);
 app.use("/appointment", appointmentRoute);
