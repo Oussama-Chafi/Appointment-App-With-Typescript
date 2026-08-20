@@ -2,6 +2,7 @@ import { type Request, type Response } from "express";
 import { Doctor } from "../models/doctorSchema.js";
 import { AppError } from "../utils/AppError.js";
 import User from "../models/userSchema.js";
+import Appointment from "../models/appointmentSchema.js";
 
 export const getPendingDoctorRequest = async (req: Request, res: Response) => {
   const pendingRequest = await Doctor.find({ status: "pending" })
@@ -53,4 +54,50 @@ export const updateDoctorStatus = async (req: Request, res: Response) => {
       message: " This request has been deleteModel.",
     });
   }
+};
+
+export const getAllPatients = async (req: Request, res: Response) => {
+  const getPatients = await User.find({ role: "patient" })
+    .select("-password")
+    .exec();
+  res.status(200).json({
+    success: true,
+    message: "This is all patients in the app",
+    patientLength: getPatients.length,
+    getPatients,
+  });
+};
+
+export const getAllDoctors = async (req: Request, res: Response) => {
+  const getDoctors = await Doctor.find()
+    .populate("userID", "first_name last_name email")
+    .exec();
+  res.status(200).json({
+    success: true,
+    message: "This is all doctors in the app",
+    doctorLength: getDoctors.length,
+    getDoctors,
+  });
+};
+
+export const getAppointments = async (req: Request, res: Response) => {
+  const getAppointment = await Appointment.find().populate([
+    { path: "patientID", select: "first_name last_name email" },    
+    { path: "slotID", select: "date startTime endTime isBooked" },
+    {
+      path: "doctorID",
+      select:
+        "address phone specialty consultationFee isAcceptingAppointments status averageRating numOfReviews userID",
+      populate: {
+        path: "userID",
+        select: "first_name last_name email",
+      },
+    },
+  ]);
+  res.status(200).json({
+    success: true,
+    message: "This all appointments in the app",
+    appointmentsLength: getAppointment.length,
+    getAppointment,
+  });
 };

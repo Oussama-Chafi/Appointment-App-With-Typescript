@@ -7,7 +7,7 @@ export type UserTypes = {
   last_name: string;
   email: string;
   password: string;
-  role: string;
+  role: "patient" | "doctor" | "admin";
   verificationToken?: string | null;
   verificationTokenExpiry?: Date | null;
   isVerified: boolean;

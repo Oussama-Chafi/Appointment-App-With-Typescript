@@ -1,6 +1,9 @@
 import express from "express";
 import { allowedTo, verifyToken } from "../middlewares/verifyToken.js";
 import {
+  getAllDoctors,
+  getAllPatients,
+  getAppointments,
   getPendingDoctorRequest,
   updateDoctorStatus,
 } from "../controllers/adminController.js";
@@ -13,4 +16,13 @@ router
   .route("/doctor-requests/:id/status")
   .patch(verifyToken, allowedTo("admin"), updateDoctorStatus);
 
+router
+  .route("/all-patients")
+  .get(verifyToken, allowedTo("admin"), getAllPatients);
+router
+  .route("/all-doctors")
+  .get(verifyToken, allowedTo("admin"), getAllDoctors);
+router
+  .route("/all-appointments")
+  .get(verifyToken, allowedTo("admin"), getAppointments);
 export default router;
