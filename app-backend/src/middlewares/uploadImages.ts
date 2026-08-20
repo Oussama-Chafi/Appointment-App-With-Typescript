@@ -18,7 +18,7 @@ const fileFilter = (
 
 export const uploader = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 8 * 1024 * 1024 },
   fileFilter,
 });
 
@@ -28,7 +28,18 @@ export const uploadToCloudinary = (
 ): Promise<UploadApiResponse> => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder: folderName },
+      {
+        folder: folderName,
+        transformation: [
+          {
+            width: 500,
+            height: 500,
+            crop: "fill",
+            gravity: "face",
+          },
+          { quality: "auto", fetch_format: "auto" },
+        ],
+      },
       (err, result) => {
         if (err) return reject(err);
         if (!result) return reject(new Error("Upload failed"));

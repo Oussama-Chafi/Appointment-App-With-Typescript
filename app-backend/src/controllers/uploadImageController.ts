@@ -23,7 +23,7 @@ export const uploadAvatar = async (req: Request, res: Response) => {
     await removeOldImage(findUser.avatarPublicID);
   }
 
-  const result = await uploadToCloudinary(image, "appointmentAvatar");
+  const result = await uploadToCloudinary(image, "AppoiProj/profileAvatar");
   const imageUrl = result.secure_url;
   const publicId = result.public_id;
   await User.findByIdAndUpdate(userID, {
