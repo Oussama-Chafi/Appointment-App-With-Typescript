@@ -53,7 +53,7 @@ export const register = async (req: Request, res: Response) => {
     password: hashPassword,
     role,
     verificationToken,
-    verificationTokenExpiry: Date.now() + 24 * 60 * 60 * 1000,
+    verificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
   });
 
   res.status(201).json({

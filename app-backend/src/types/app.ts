@@ -11,6 +11,8 @@ export type UserTypes = {
   verificationToken?: string | null;
   verificationTokenExpiry?: Date | null;
   isVerified: boolean;
+  resetToken?: string | null;
+  resetTokenExpiry?: Date | null;
 };
 
 export interface CustomPayload extends JwtPayload {

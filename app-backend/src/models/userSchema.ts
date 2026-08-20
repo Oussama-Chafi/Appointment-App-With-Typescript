@@ -31,6 +31,14 @@ const userSchema = new mongoose.Schema<UserTypes>(
       type: Boolean,
       default: false,
     },
+    resetToken: {
+      type: String,
+      default: null,
+    },
+    resetTokenExpiry: {
+      type: Date,
+      default: null,
+    },
     role: {
       type: String,
       enum: ["patient", "doctor", "admin"],
