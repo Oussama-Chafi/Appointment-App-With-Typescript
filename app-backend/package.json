@@ -17,8 +17,10 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.2.0",
     "@types/node": "^26.2.0",
     "@types/nodemailer": "^8.0.1",
+    "@types/streamifier": "^0.1.2",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.11",
@@ -26,6 +28,7 @@
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -36,7 +39,9 @@
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.5.0",
     "mongoose": "^9.9.1",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
+    "streamifier": "^0.1.1",
     "stripe": "^22.5.0"
   }
 }

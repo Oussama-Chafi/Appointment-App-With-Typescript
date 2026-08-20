@@ -82,7 +82,7 @@ export const getAllDoctors = async (req: Request, res: Response) => {
 
 export const getAppointments = async (req: Request, res: Response) => {
   const getAppointment = await Appointment.find().populate([
-    { path: "patientID", select: "first_name last_name email" },    
+    { path: "patientID", select: "first_name last_name email" },
     { path: "slotID", select: "date startTime endTime isBooked" },
     {
       path: "doctorID",
@@ -90,7 +90,7 @@ export const getAppointments = async (req: Request, res: Response) => {
         "address phone specialty consultationFee isAcceptingAppointments status averageRating numOfReviews userID",
       populate: {
         path: "userID",
-        select: "first_name last_name email",
+        select: "first_name last_name email avatar",
       },
     },
   ]);

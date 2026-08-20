@@ -13,6 +13,8 @@ export type UserTypes = {
   isVerified: boolean;
   resetToken?: string | null;
   resetTokenExpiry?: Date | null;
+  avatar: string;
+  avatarPublicID?: string | null;
 };
 
 export interface CustomPayload extends JwtPayload {

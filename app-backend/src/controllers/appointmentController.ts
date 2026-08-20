@@ -36,7 +36,7 @@ export const bookAppointment = async (req: Request, res: Response) => {
   await getSlot.save();
 
   await createAppointment.populate([
-    { path: "patientID", select: "first_name last_name email" },
+    { path: "patientID", select: "first_name last_name email avatar" },
     { path: "slotID", select: "date startTime endTime" },
     {
       path: "doctorID",
@@ -62,14 +62,14 @@ export const getMyAppointment = async (req: Request, res: Response) => {
   }
   const myAppointment = await Appointment.find({ patientID })
     .populate([
-      { path: "patientID", select: "first_name last_name email" },
+      { path: "patientID", select: "first_name last_name email avatar" },
       { path: "slotID", select: "date startTime endTime" },
       {
         path: "doctorID",
         select: "specialty address phone consultationFee userID",
         populate: {
           path: "userID",
-          select: "first_name last_name email",
+          select: "first_name last_name email avatar",
         },
       },
     ])

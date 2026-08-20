@@ -18,6 +18,7 @@ import reviewsRoute from "./routes/reviewsRoute.js";
 import paymentRoute from "./routes/paymentRoute.js";
 import webhookRoute from "./routes/webhookRoute.js";
 import corsOptions from "./config/corsOptions.js";
+import imagesRoute from "./routes/imagesRoute.js";
 import { authLimiter, globalLimiter } from "./middlewares/rateLimiter.js";
 
 const app = express();
@@ -44,6 +45,7 @@ app.use("/doctors", doctorsRoute);
 app.use("/appointment", appointmentRoute);
 app.use("/reviews", reviewsRoute);
 app.use("/payment", paymentRoute);
+app.use("/images", imagesRoute);
 app.use(notFoundPage);
 
 mongoose.connection.once("open", () => {

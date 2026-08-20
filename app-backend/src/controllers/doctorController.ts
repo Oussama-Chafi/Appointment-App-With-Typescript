@@ -114,7 +114,17 @@ export const getAvailableSlots = async (req: Request, res: Response) => {
     doctorID,
     date: { $gte: today as string },
     isBooked: false,
-  });
+  }).populate([
+    {
+      path: "doctorID",
+      select:
+        "speciality phone address consultationFee isAcceptingAppointments averageRating numOfReviews userID",
+      populate: {
+        path: "userID",
+        select: "first_name last_name email avatar",
+      },
+    },
+  ]);
   if (availableSlots.length === 0) {
     throw new AppError(404, "No Slots found .");
   }
@@ -181,7 +191,7 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
     doctorID: findDoc._id,
   })
     .populate([
-      { path: "patientID", select: "first_name last_name email" },
+      { path: "patientID", select: "first_name last_name email avatar" },
       { path: "slotID", select: "date startTime endTime" },
     ])
     .exec();

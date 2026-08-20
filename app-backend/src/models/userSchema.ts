@@ -39,6 +39,16 @@ const userSchema = new mongoose.Schema<UserTypes>(
       type: Date,
       default: null,
     },
+    avatar: {
+      type: String,
+      default: function (): string {
+        return `https://ui-avatars.com/api/?name=${this.first_name}+${this.last_name}&background=random&color=fff&size=128`;
+      },
+    },
+    avatarPublicID: {
+      type: String,
+      default: null,
+    },
     role: {
       type: String,
       enum: ["patient", "doctor", "admin"],

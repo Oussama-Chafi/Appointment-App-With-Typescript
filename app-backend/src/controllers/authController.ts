@@ -118,6 +118,9 @@ export const login = async (req: Request, res: Response) => {
       first_name: findUser.first_name,
       last_name: findUser.last_name,
       email: findUser.email,
+      avatar: findUser.avatar,
+      isVerified: findUser.isVerified,
+      verificationTokenExpiry: findUser.verificationTokenExpiry,
     },
     accessToken,
   });
@@ -165,6 +168,9 @@ export const refresh = async (
             first_name: findUser.first_name,
             last_name: findUser.last_name,
             email: findUser.email,
+            avatar: findUser.avatar,
+            isVerified: findUser.isVerified,
+            verificationTokenExpiry: findUser.verificationTokenExpiry,
           },
           accessToken,
         });
