@@ -3,6 +3,7 @@ import { Doctor } from "../models/doctorSchema.js";
 import { AppError } from "../utils/AppError.js";
 import User from "../models/userSchema.js";
 import Appointment from "../models/appointmentSchema.js";
+import DocSlot from "../models/slotSchema.js";
 
 export const getPendingDoctorRequest = async (req: Request, res: Response) => {
   const pendingRequest = await Doctor.find({ status: "pending" })
@@ -40,7 +41,10 @@ export const updateDoctorStatus = async (req: Request, res: Response) => {
       role: "doctor",
     });
 
-    await findDocReq.populate("userID", "first_name last_name email avatar phone gender");
+    await findDocReq.populate(
+      "userID",
+      "first_name last_name email avatar phone gender",
+    );
 
     return res.status(200).json({
       success: true,
@@ -57,8 +61,22 @@ export const updateDoctorStatus = async (req: Request, res: Response) => {
 };
 
 export const getAllPatients = async (req: Request, res: Response) => {
-  const getPatients = await User.find({ role: "patient" })
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+  const search = (req.query.search as string) || "";
+
+  const getPatients = await User.find({
+    role: "patient",
+    $or: [
+      { first_name: { $regex: search, $options: "i" } },
+      { last_name: { $regex: search, $options: "i" } },
+      { email: { $regex: search, $options: "i" } },
+    ],
+  })
     .select("-password")
+    .skip(skip)
+    .limit(limit)
     .exec();
   res.status(200).json({
     success: true,
@@ -69,7 +87,27 @@ export const getAllPatients = async (req: Request, res: Response) => {
 };
 
 export const getAllDoctors = async (req: Request, res: Response) => {
-  const getDoctors = await Doctor.find()
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+  const search = (req.query.search as string) || "";
+  let filterDoctor = {};
+
+  if (search.length > 0) {
+    const matchingUser = await User.find({
+      $or: [
+        { first_name: { $regex: search, $options: "i" } },
+        { last_name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ],
+    }).select("_id");
+    const userIDs = matchingUser.map((user) => user._id);
+    filterDoctor = { userID: { $in: userIDs } };
+  }
+
+  const getDoctors = await Doctor.find(filterDoctor)
+    .skip(skip)
+    .limit(limit)
     .populate("userID", "first_name last_name email avatar gender")
     .exec();
   res.status(200).json({
@@ -81,19 +119,54 @@ export const getAllDoctors = async (req: Request, res: Response) => {
 };
 
 export const getAppointments = async (req: Request, res: Response) => {
-  const getAppointment = await Appointment.find().populate([
-    { path: "patientID", select: "first_name last_name email phone gender" },
-    { path: "slotID", select: "date startTime endTime isBooked" },
-    {
-      path: "doctorID",
-      select:
-        "address phone specialty consultationFee isAcceptingAppointments status averageRating numOfReviews userID",
-      populate: {
-        path: "userID",
-        select: "first_name last_name email avatar gender",
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+  const search = (req.query.search as string) || "";
+  let queryFilter = {};
+
+  if (search.length > 0) {
+    const matchingUser = await User.find({
+      $or: [
+        { first_name: { $regex: search, $options: "i" } },
+        { last_name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ],
+    }).select("_id");
+    const userIDs = matchingUser.map((user) => user._id);
+
+    const matchnigDate = await DocSlot.find({
+      date: {
+        $regex: search,
+        $options: "i",
       },
-    },
-  ]);
+    }).select("_id");
+    const dates = matchnigDate.map((date) => date._id);
+    queryFilter = {
+      $or: [
+        { patientID: { $in: userIDs } },
+        { doctorID: { $in: userIDs } },
+        { slotID: { $in: dates } },
+      ],
+    };
+  }
+
+  const getAppointment = await Appointment.find(queryFilter)
+    .skip(skip)
+    .limit(limit)
+    .populate([
+      { path: "patientID", select: "first_name last_name email phone gender" },
+      { path: "slotID", select: "date startTime endTime isBooked" },
+      {
+        path: "doctorID",
+        select:
+          "address phone specialty consultationFee isAcceptingAppointments status averageRating numOfReviews userID",
+        populate: {
+          path: "userID",
+          select: "first_name last_name email avatar gender",
+        },
+      },
+    ]);
   res.status(200).json({
     success: true,
     message: "This all appointments in the app",
@@ -101,3 +174,5 @@ export const getAppointments = async (req: Request, res: Response) => {
     getAppointment,
   });
 };
+
+// export const

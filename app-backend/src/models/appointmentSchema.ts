@@ -4,36 +4,39 @@ import { Doctor } from "./doctorSchema.js";
 import DocSlot from "./slotSchema.js";
 import type { IAppointmentSchema } from "../types/app.js";
 
-const appointmentSchema = new mongoose.Schema<IAppointmentSchema>({
-  patientID: {
-    type: mongoose.Types.ObjectId,
-    ref: "User",
-    required: true,
+const appointmentSchema = new mongoose.Schema<IAppointmentSchema>(
+  {
+    patientID: {
+      type: mongoose.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    doctorID: {
+      type: mongoose.Types.ObjectId,
+      ref: "Doctor",
+      required: true,
+    },
+    slotID: {
+      type: mongoose.Types.ObjectId,
+      ref: "DocSlot",
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "confirmed", "cancelled", "completed", "rejected"],
+      default: "pending",
+    },
+    payment: {
+      type: Boolean,
+      default: false,
+    },
+    notes: {
+      type: String,
+      default: "Get well soon.",
+    },
   },
-  doctorID: {
-    type: mongoose.Types.ObjectId,
-    ref: "Doctor",
-    required: true,
-  },
-  slotID: {
-    type: mongoose.Types.ObjectId,
-    ref: "DocSlot",
-    required: true,
-  },
-  status: {
-    type: String,
-    enum: ["pending", "confirmed", "cancelled", "completed", "rejected"],
-    default: "pending",
-  },
-  payment: {
-    type: Boolean,
-    default: false,
-  },
-  notes: {
-    type: String,
-    default: "Get well soon.",
-  },
-});
+  { timestamps: true },
+);
 
 const Appointment = mongoose.model("Appointment", appointmentSchema);
 export default Appointment;

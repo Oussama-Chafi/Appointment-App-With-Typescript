@@ -8,6 +8,7 @@ import { Doctor } from "../models/doctorSchema.js";
 import DocSlot from "../models/slotSchema.js";
 import Appointment from "../models/appointmentSchema.js";
 import { Types } from "mongoose";
+import User from "../models/userSchema.js";
 
 export const applyAsDoctor = async (req: Request, res: Response) => {
   const { error, value } = applyAsDoctorVali.validate(req.body);
@@ -36,7 +37,10 @@ export const applyAsDoctor = async (req: Request, res: Response) => {
     // status : "pending"
   });
 
-  await newDoctorRequest.populate("userID", "first_name last_name email avatar phone gender");
+  await newDoctorRequest.populate(
+    "userID",
+    "first_name last_name email avatar phone gender",
+  );
 
   res.status(201).json({
     success: true,
@@ -108,23 +112,36 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
 };
 
 export const getAvailableSlots = async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+  const search = (req.query.search as string)?.trim() || "";
+
   const doctorID = req.params.doctorID as string;
   const today = new Date().toISOString().split("T")[0];
+  const dateFilter: any = { $gte: today };
+  if (search.length > 0) {
+    dateFilter.$regex = search;
+    dateFilter.$options = "i";
+  }
   const availableSlots = await DocSlot.find({
     doctorID,
-    date: { $gte: today as string },
     isBooked: false,
-  }).populate([
-    {
-      path: "doctorID",
-      select:
-        "speciality phone address consultationFee isAcceptingAppointments averageRating numOfReviews userID",
-      populate: {
-        path: "userID",
-        select: "first_name last_name email avatar gender",
+    date: dateFilter,
+  })
+    .skip(skip)
+    .limit(limit)
+    .populate([
+      {
+        path: "doctorID",
+        select:
+          "speciality phone address consultationFee isAcceptingAppointments averageRating numOfReviews userID",
+        populate: {
+          path: "userID",
+          select: "first_name last_name email avatar gender",
+        },
       },
-    },
-  ]);
+    ]);
   if (availableSlots.length === 0) {
     throw new AppError(404, "No Slots found .");
   }
@@ -180,6 +197,11 @@ export const deleteManyDoctorSlots = async (req: Request, res: Response) => {
 
 export const getDoctorAppointments = async (req: Request, res: Response) => {
   const userID = req.user?.id;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const search = (req.query.search as string)?.trim() || "";
+  const skip = (page - 1) * limit;
+
   if (!userID) {
     throw new AppError(401, "You should Log in first.");
   }
@@ -187,11 +209,34 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
   if (!findDoc) {
     throw new AppError(404, "Doctor Profile not found!");
   }
-  const docAppointment = await Appointment.find({
-    doctorID: findDoc._id,
-  })
+  let queryFilter: any = { doctorID: findDoc._id };
+  if (search.length > 0) {
+    const matchingDate = await DocSlot.find({
+      date: { $regex: search, $options: "i" },
+    }).select("_id");
+    const slotIds = matchingDate.map((date) => date._id);
+
+    const matchingPatient = await User.find({
+      $or: [
+        { first_name: { $regex: search, $options: "i" } },
+        { last_name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ],
+    }).select("_id");
+    const userIds = matchingPatient.map((patient) => patient._id);
+    queryFilter.$or = [
+      { slotID: { $in: slotIds } },
+      { patientID: { $in: userIds } },
+    ];
+  }
+  const docAppointment = await Appointment.find(queryFilter)
+    .skip(skip)
+    .limit(limit)
     .populate([
-      { path: "patientID", select: "first_name last_name email avatar phone gender" },
+      {
+        path: "patientID",
+        select: "first_name last_name email avatar phone gender",
+      },
       { path: "slotID", select: "date startTime endTime" },
     ])
     .exec();

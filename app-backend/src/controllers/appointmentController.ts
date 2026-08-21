@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { AppError } from "../utils/AppError.js";
 import DocSlot from "../models/slotSchema.js";
 import Appointment from "../models/appointmentSchema.js";
+import User from "../models/userSchema.js";
+import { Doctor } from "../models/doctorSchema.js";
 
 export const bookAppointment = async (req: Request, res: Response) => {
   const slotID = req.params.slotID as string;
@@ -36,7 +38,10 @@ export const bookAppointment = async (req: Request, res: Response) => {
   await getSlot.save();
 
   await createAppointment.populate([
-    { path: "patientID", select: "first_name last_name email avatar phone gender" },
+    {
+      path: "patientID",
+      select: "first_name last_name email avatar phone gender",
+    },
     { path: "slotID", select: "date startTime endTime" },
     {
       path: "doctorID",
@@ -60,9 +65,48 @@ export const getMyAppointment = async (req: Request, res: Response) => {
   if (!patientID) {
     throw new AppError(401, "You should log in first!");
   }
-  const myAppointment = await Appointment.find({ patientID })
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const skip = (page - 1) * limit;
+  const search = (req.query.search as string)?.trim() || "";
+  let filterMyAppointments: any = { patientID };
+
+  if (search.length > 0) {
+    const matchingUser = await User.find({
+      $or: [
+        { first_name: { $regex: search, $options: "i" } },
+        { last_name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ],
+    }).select("_id");
+    const userID = matchingUser.map((user) => user._id);
+    const matchingDoctor = await Doctor.find({ userID: { $in: userID } });
+
+    const doctorIds = matchingDoctor.map((doc) => doc._id);
+
+    const matchingDate = await DocSlot.find({
+      date: {
+        $regex: search,
+        $options: "i",
+      },
+    }).select("_id");
+
+    const slotIds = matchingDate.map((date) => date._id);
+
+    filterMyAppointments.$or = [
+      { doctorID: { $in: doctorIds } },
+      { slotID: { $in: slotIds } },
+    ];
+  }
+
+  const myAppointment = await Appointment.find(filterMyAppointments)
+    .skip(skip)
+    .limit(limit)
     .populate([
-      { path: "patientID", select: "first_name last_name email avatar phone gender" },
+      {
+        path: "patientID",
+        select: "first_name last_name email avatar phone gender",
+      },
       { path: "slotID", select: "date startTime endTime" },
       {
         path: "doctorID",
