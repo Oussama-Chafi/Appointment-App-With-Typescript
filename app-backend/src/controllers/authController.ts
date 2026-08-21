@@ -23,7 +23,7 @@ export const register = async (req: Request, res: Response) => {
       error.details[0]?.message || "you should add all information",
     );
   }
-  const { first_name, last_name, email, password, role , phone , gender } = value;
+  const { first_name, last_name, email, password, role, phone, gender } = value;
 
   const isEmailExist = await User.findOne({ email });
   if (isEmailExist) {
@@ -54,7 +54,7 @@ export const register = async (req: Request, res: Response) => {
     role,
     verificationToken,
     verificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    phone ,
+    phone,
     gender,
   });
 
@@ -66,8 +66,8 @@ export const register = async (req: Request, res: Response) => {
       first_name: addUser.first_name,
       last_name: addUser.last_name,
       email: addUser.email,
-      phone : addUser.phone,
-      gender : addUser.gender,
+      phone: addUser.phone,
+      gender: addUser.gender,
     },
   });
 };
@@ -85,6 +85,9 @@ export const login = async (req: Request, res: Response) => {
   if (!findUser) {
     throw new AppError(400, "Email or Password is not correct!");
   }
+  if (findUser.isBlocked) {
+    throw new AppError(403, "Your account has been blocked.");
+  }
   const checkPassword = await bcrypt.compare(password, findUser.password);
   if (!checkPassword) {
     throw new AppError(400, "Email or Password is not correct!");
@@ -94,7 +97,7 @@ export const login = async (req: Request, res: Response) => {
       userInfo: {
         id: findUser._id,
         role: findUser.role,
-        tokenVersion : findUser.tokenVersion,
+        tokenVersion: findUser.tokenVersion,
       },
     },
     process.env.ACCESS_TOKEN as string,
@@ -105,7 +108,7 @@ export const login = async (req: Request, res: Response) => {
       userInfo: {
         id: findUser._id,
         role: findUser.role,
-        tokenVersion : findUser.tokenVersion,
+        tokenVersion: findUser.tokenVersion,
       },
     },
     process.env.REFRESH_TOKEN!,
@@ -127,8 +130,8 @@ export const login = async (req: Request, res: Response) => {
       avatar: findUser.avatar,
       isVerified: findUser.isVerified,
       verificationTokenExpiry: findUser.verificationTokenExpiry,
-      phone : findUser.phone,
-      gender : findUser.gender,
+      phone: findUser.phone,
+      gender: findUser.gender,
     },
     accessToken,
   });
@@ -165,7 +168,7 @@ export const refresh = async (
             userInfo: {
               id: findUser._id,
               role: findUser.role,
-              tokenVersion : findUser.tokenVersion,
+              tokenVersion: findUser.tokenVersion,
             },
           },
           process.env.ACCESS_TOKEN as string,
@@ -180,8 +183,8 @@ export const refresh = async (
             avatar: findUser.avatar,
             isVerified: findUser.isVerified,
             verificationTokenExpiry: findUser.verificationTokenExpiry,
-            phone : findUser.phone,
-            gender : findUser.gender,
+            phone: findUser.phone,
+            gender: findUser.gender,
           },
           accessToken,
         });

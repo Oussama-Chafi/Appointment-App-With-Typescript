@@ -200,3 +200,32 @@ export const updateRoleOfUser = async (req: Request, res: Response) => {
     updateUser,
   });
 };
+
+export const toggleBlockUser = async (req: Request, res: Response) => {
+  const userID = req.params.userId as string;
+  const { isBlocked } = req.body;
+  if (!userID) {
+    throw new AppError(400, "User ID is required");
+  }
+  const getUser = await User.findById(userID).exec();
+  if (!getUser) {
+    throw new AppError(404, "Account profile not found");
+  }
+  if (getUser.role === "admin") {
+    throw new AppError(403, "You cannot block an admin");
+  }
+
+  if (typeof isBlocked !== "boolean") {
+    throw new AppError(400, "Please provide isBlocked as a boolean");
+  }
+
+  getUser.isBlocked = isBlocked;
+  getUser.tokenVersion++;
+  await getUser.save();
+
+  res.status(200).json({
+    success: true,
+    message: `User has been successfully ${isBlocked ? "blocked" : "unblocked"}.`,
+    data: getUser,
+  });
+};

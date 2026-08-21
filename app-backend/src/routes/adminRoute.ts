@@ -5,6 +5,7 @@ import {
   getAllPatients,
   getAppointments,
   getPendingDoctorRequest,
+  toggleBlockUser,
   updateDoctorStatus,
   updateRoleOfUser,
 } from "../controllers/adminController.js";
@@ -29,5 +30,8 @@ router
 router
   .route("/update-role/:userId")
   .patch(verifyToken, allowedTo("admin"), updateRoleOfUser);
+router
+  .route("/block-user/:userId")
+  .patch(verifyToken, allowedTo("admin"), toggleBlockUser);
 
 export default router;

@@ -17,14 +17,15 @@ export type UserTypes = {
   avatarPublicID?: string | null;
   phone?: string | null;
   gender?: string | null;
-  tokenVersion : number;
+  tokenVersion: number;
+  isBlocked: boolean;
 };
 
 export interface CustomPayload extends JwtPayload {
   userInfo: {
     id: string;
     role: string;
-    tokenVersion : number;
+    tokenVersion: number;
   };
 }
 
