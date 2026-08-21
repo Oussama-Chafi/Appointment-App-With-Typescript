@@ -13,7 +13,7 @@ export const uploadAvatar = async (req: Request, res: Response) => {
   }
   const userID = req.user?.id;
   if (!userID) {
-    throw new AppError(401, "You are unthenticated");
+    throw new AppError(401, "You are unauthenticated");
   }
   const findUser = await User.findOne({ _id: userID });
   if (!findUser) {

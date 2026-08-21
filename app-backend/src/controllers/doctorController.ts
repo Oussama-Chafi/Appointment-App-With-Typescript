@@ -36,7 +36,7 @@ export const applyAsDoctor = async (req: Request, res: Response) => {
     // status : "pending"
   });
 
-  await newDoctorRequest.populate("userID", "first_name last_name email");
+  await newDoctorRequest.populate("userID", "first_name last_name email avatar phone gender");
 
   res.status(201).json({
     success: true,
@@ -57,7 +57,7 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
   const { date, startTime, endTime, excludedSlots } = req.body;
   const doctorID = req.user?.id;
   if (!doctorID) {
-    throw new AppError(400, "This User is Unthenticated.");
+    throw new AppError(400, "You are unauthenticated.");
   }
   const findDoc = await Doctor.findOne({ userID: doctorID });
   if (!findDoc) {
@@ -95,7 +95,7 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
     select: "phone specialty address consultationFee userID",
     populate: {
       path: "userID",
-      select: "first_name last_name email",
+      select: "first_name last_name email avatar gender",
     },
   });
 
@@ -121,7 +121,7 @@ export const getAvailableSlots = async (req: Request, res: Response) => {
         "speciality phone address consultationFee isAcceptingAppointments averageRating numOfReviews userID",
       populate: {
         path: "userID",
-        select: "first_name last_name email avatar",
+        select: "first_name last_name email avatar gender",
       },
     },
   ]);
@@ -191,7 +191,7 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
     doctorID: findDoc._id,
   })
     .populate([
-      { path: "patientID", select: "first_name last_name email avatar" },
+      { path: "patientID", select: "first_name last_name email avatar phone gender" },
       { path: "slotID", select: "date startTime endTime" },
     ])
     .exec();
@@ -261,7 +261,7 @@ export const getDoctorProfile = async (req: Request, res: Response) => {
     throw new AppError(400, "You should add the Doctor ID first.");
   }
   const getProfile = await Doctor.findById(doctorID)
-    .populate("userID", "first_name last_name email")
+    .populate("userID", "first_name last_name email avatar gender")
     .exec();
   if (!getProfile) {
     throw new AppError(404, "Doctor Profile not found!");

@@ -23,7 +23,7 @@ export const register = async (req: Request, res: Response) => {
       error.details[0]?.message || "you should add all information",
     );
   }
-  const { first_name, last_name, email, password, role } = value;
+  const { first_name, last_name, email, password, role , phone , gender } = value;
 
   const isEmailExist = await User.findOne({ email });
   if (isEmailExist) {
@@ -54,6 +54,8 @@ export const register = async (req: Request, res: Response) => {
     role,
     verificationToken,
     verificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    phone ,
+    gender,
   });
 
   res.status(201).json({
@@ -64,6 +66,8 @@ export const register = async (req: Request, res: Response) => {
       first_name: addUser.first_name,
       last_name: addUser.last_name,
       email: addUser.email,
+      phone : addUser.phone,
+      gender : addUser.gender,
     },
   });
 };
@@ -121,6 +125,8 @@ export const login = async (req: Request, res: Response) => {
       avatar: findUser.avatar,
       isVerified: findUser.isVerified,
       verificationTokenExpiry: findUser.verificationTokenExpiry,
+      phone : findUser.phone,
+      gender : findUser.gender,
     },
     accessToken,
   });
@@ -171,6 +177,8 @@ export const refresh = async (
             avatar: findUser.avatar,
             isVerified: findUser.isVerified,
             verificationTokenExpiry: findUser.verificationTokenExpiry,
+            phone : findUser.phone,
+            gender : findUser.gender,
           },
           accessToken,
         });

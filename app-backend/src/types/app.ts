@@ -15,6 +15,8 @@ export type UserTypes = {
   resetTokenExpiry?: Date | null;
   avatar: string;
   avatarPublicID?: string | null;
+  phone?: string | null;
+  gender?: string | null;
 };
 
 export interface CustomPayload extends JwtPayload {

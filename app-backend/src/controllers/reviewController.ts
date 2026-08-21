@@ -69,7 +69,7 @@ export const createReview = async (req: Request, res: Response) => {
   });
 
   await createReview.populate([
-    { path: "patientID", select: "first_name last_name email avatar" },
+    { path: "patientID", select: "first_name last_name email avatar gender" },
     {
       path: "appointmentID",
       select: "slotID",
@@ -84,7 +84,7 @@ export const createReview = async (req: Request, res: Response) => {
         "specialty phone address consultationFee averageRating numOfReviews userID",
       populate: {
         path: "userID",
-        select: "first_name last_name email avatar",
+        select: "first_name last_name email avatar gender",
       },
     },
   ]);

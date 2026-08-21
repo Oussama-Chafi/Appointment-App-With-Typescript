@@ -19,6 +19,14 @@ const userSchema = new mongoose.Schema<UserTypes>(
       type: String,
       required: true,
     },
+    phone: {
+      type: String,
+      default: null,
+    },
+    gender: {
+      type: String,
+      default: null,
+    },
     verificationToken: {
       type: String,
       default: null,
