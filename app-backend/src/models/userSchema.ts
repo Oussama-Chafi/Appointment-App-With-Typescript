@@ -39,6 +39,10 @@ const userSchema = new mongoose.Schema<UserTypes>(
       type: Boolean,
       default: false,
     },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
     resetToken: {
       type: String,
       default: null,

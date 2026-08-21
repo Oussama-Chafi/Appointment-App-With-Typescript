@@ -30,11 +30,11 @@ export const updateProfile = async (req: Request, res: Response) => {
 
   const getProfile = await User.findByIdAndUpdate(
     userID,
-    { first_name, last_name, email, phone, gender},
+    { first_name, last_name, email, phone, gender },
     { new: true, runValidators: true },
   )
     .select("-password")
-    .exec()
+    .exec();
   if (!getProfile) {
     throw new AppError(404, "Account profile not found!");
   }
@@ -54,7 +54,7 @@ export const changePassword = async (req: Request, res: Response) => {
   if (!userID) {
     throw new AppError(401, "You are now unauthenticated.");
   }
-  const getUser = await User.findOne({ _id : userID }).exec();
+  const getUser = await User.findOne({ _id: userID }).exec();
   if (!getUser) {
     throw new AppError(404, "Account Profile not found");
   }
@@ -65,7 +65,7 @@ export const changePassword = async (req: Request, res: Response) => {
   const hashNewPassword = await bcrypt.hash(newPassword, 10);
 
   getUser.password = hashNewPassword;
-  
+
   await getUser.save();
   res.status(200).json({
     success: true,
@@ -83,4 +83,18 @@ export const deleteAccount = async (req: Request, res: Response) => {
     throw new AppError(404, "Account profile not found.");
   }
   res.status(204).json({ success: true });
+};
+
+export const logoutAllDevices = async (req: Request, res: Response) => {
+  const userID = req.user?.id;
+  if (!userID) {
+    throw new AppError(401, "You are unauthenticated");
+  }
+  await User.findByIdAndUpdate(userID, {
+    $inc: { tokenVersion: 1 },
+  });
+  res.status(200).json({
+    success: true,
+    message: "Logged out from all devices successfully",
+  });
 };

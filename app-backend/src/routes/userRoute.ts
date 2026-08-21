@@ -4,6 +4,7 @@ import {
   changePassword,
   deleteAccount,
   getProfile,
+  logoutAllDevices,
   updateProfile,
 } from "../controllers/userController.js";
 import { validateBody } from "../middlewares/validationData.js";
@@ -23,5 +24,6 @@ router
   .patch(validateBody(updateUserVali), verifyToken, updateProfile);
 
 router.route("/delete-account").get(verifyToken, deleteAccount);
+router.route("/logout-all").patch(verifyToken , logoutAllDevices);
 
 export default router;

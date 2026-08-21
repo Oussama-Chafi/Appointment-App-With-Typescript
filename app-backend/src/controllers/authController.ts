@@ -94,6 +94,7 @@ export const login = async (req: Request, res: Response) => {
       userInfo: {
         id: findUser._id,
         role: findUser.role,
+        tokenVersion : findUser.tokenVersion,
       },
     },
     process.env.ACCESS_TOKEN as string,
@@ -104,6 +105,7 @@ export const login = async (req: Request, res: Response) => {
       userInfo: {
         id: findUser._id,
         role: findUser.role,
+        tokenVersion : findUser.tokenVersion,
       },
     },
     process.env.REFRESH_TOKEN!,
@@ -163,6 +165,7 @@ export const refresh = async (
             userInfo: {
               id: findUser._id,
               role: findUser.role,
+              tokenVersion : findUser.tokenVersion,
             },
           },
           process.env.ACCESS_TOKEN as string,
