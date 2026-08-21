@@ -229,3 +229,25 @@ export const toggleBlockUser = async (req: Request, res: Response) => {
     data: getUser,
   });
 };
+
+export const deleteAnAccount = async (req: Request, res: Response) => {
+  const userID = req.params.userId as string;
+  if (!userID) {
+    throw new AppError(400, "User ID is required");
+  }
+  const getUser = await User.findById(userID).lean();
+  if (!getUser) {
+    throw new AppError(404, "Account Profile not found");
+  }
+  if (getUser.role === "admin") {
+    throw new AppError(403, "You cannot delete yourself or delete an admin");
+  }
+  if (getUser.role === "doctor") {
+    await Doctor.findOneAndDelete({ userID });
+  }
+  await User.findByIdAndDelete(userID);
+  res.status(200).json({
+    success: true,
+    message: "Account has been deleted successfully",
+  });
+};

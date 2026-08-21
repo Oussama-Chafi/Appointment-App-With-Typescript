@@ -1,6 +1,7 @@
 import express from "express";
 import { allowedTo, verifyToken } from "../middlewares/verifyToken.js";
 import {
+  deleteAnAccount,
   getAllDoctors,
   getAllPatients,
   getAppointments,
@@ -33,5 +34,8 @@ router
 router
   .route("/block-user/:userId")
   .patch(verifyToken, allowedTo("admin"), toggleBlockUser);
+router
+  .route("/delete-account/:userId")
+  .delete(verifyToken, allowedTo("admin"), deleteAnAccount);
 
 export default router;
