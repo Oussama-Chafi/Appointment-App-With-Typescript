@@ -6,6 +6,7 @@ import {
   getAppointments,
   getPendingDoctorRequest,
   updateDoctorStatus,
+  updateRoleOfUser,
 } from "../controllers/adminController.js";
 const router = express();
 
@@ -25,4 +26,8 @@ router
 router
   .route("/all-appointments")
   .get(verifyToken, allowedTo("admin"), getAppointments);
+router
+  .route("/update-role/:userId")
+  .patch(verifyToken, allowedTo("admin"), updateRoleOfUser);
+
 export default router;

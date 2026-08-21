@@ -175,4 +175,28 @@ export const getAppointments = async (req: Request, res: Response) => {
   });
 };
 
-// export const
+export const updateRoleOfUser = async (req: Request, res: Response) => {
+  const userID = req.params.userId as string;
+  const { newRole } = req.body;
+  if (!newRole || !["user", "doctor", "admin"].includes(newRole)) {
+    throw new AppError(400, "Please the role");
+  }
+  if (!userID) {
+    throw new AppError(400, "user ID is required");
+  }
+  const updateUser = await User.findByIdAndUpdate(
+    userID,
+    {
+      role: newRole,
+    },
+    { returnDocument: "after", runValidators: true },
+  );
+  if (!updateUser) {
+    throw new AppError(404, "Account profile not found");
+  }
+  res.status(200).json({
+    success: true,
+    message: "The role has been updated successfully",
+    updateUser,
+  });
+};
