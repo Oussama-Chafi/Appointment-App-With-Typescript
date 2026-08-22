@@ -58,7 +58,7 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
       error.details[0]?.message || "All fields are required!",
     );
   }
-  const { date, startTime, endTime, excludedSlots } = req.body;
+  const { date, startTime, endTime, price, excludedSlots } = req.body;
   const doctorID = req.user?.id;
   if (!doctorID) {
     throw new AppError(400, "You are unauthenticated.");
@@ -89,6 +89,7 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
         date,
         startTime: slotStart,
         endTime: slotEnd,
+        price,
       });
     }
     startHour++;

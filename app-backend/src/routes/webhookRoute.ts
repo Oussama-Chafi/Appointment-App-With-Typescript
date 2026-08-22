@@ -3,12 +3,10 @@ import { handleStripeWebhook } from "../controllers/webhookController.js";
 import { verifyToken } from "../middlewares/verifyToken.js";
 const router = express();
 
-router
-  .route("/webhook")
-  .post(
-    express.raw({ type: "application/json" }),
-    verifyToken,
-    handleStripeWebhook,
-  );
+router.route("/webhook").post(
+  express.raw({ type: "application/json" }),
+
+  handleStripeWebhook,
+);
 
 export default router;

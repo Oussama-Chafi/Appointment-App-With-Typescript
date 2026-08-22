@@ -18,6 +18,7 @@ export const addDoctorSlotsVali = joi
       .required(),
     startTime: joi.string().required(),
     endTime: joi.string().required(),
+    price: joi.number().required(),
     excludedSlots: joi
       .array()
       .items(joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)$/))

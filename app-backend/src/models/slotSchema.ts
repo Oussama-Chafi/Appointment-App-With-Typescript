@@ -20,6 +20,10 @@ const slotSchema = new mongoose.Schema<ISlotSchemaType>(
       type: String,
       required: true,
     },
+    price: {
+      type: Number,
+      required: true,
+    },
     isBooked: {
       type: Boolean,
       default: false,

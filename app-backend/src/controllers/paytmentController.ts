@@ -1,9 +1,14 @@
 import type { Request, Response } from "express";
-import { checkoutSessionVali } from "../validation/paytmentValidation.js";
 import { AppError } from "../utils/AppError.js";
+import { checkoutSessionVali } from "../validation/paytmentValidation.js";
+import Appointment from "../models/appointmentSchema.js";
 import { getStripeInstance } from "../config/stripe.js";
 
 export const createCheckoutSession = async (req: Request, res: Response) => {
+  const appointmentID = req.params.appointmentId as string;
+  if (!appointmentID) {
+    throw new AppError(400, "Appointment ID is required");
+  }
   const { error } = checkoutSessionVali.validate(req.body);
   if (error) {
     throw new AppError(
@@ -11,7 +16,14 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
       error.details[0]?.message || "All fields are required!",
     );
   }
-  const { appointmentID, doctorName, price } = req.body;
+  const { doctorName, price } = req.body;
+  const getAppointment = await Appointment.findById(appointmentID).lean();
+  if (!getAppointment) {
+    throw new AppError(404, "Appointment not found.");
+  }
+  if (price < getAppointment.price) {
+    throw new AppError(400, "You should add the right price please.");
+  }
   const stripe = getStripeInstance();
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],

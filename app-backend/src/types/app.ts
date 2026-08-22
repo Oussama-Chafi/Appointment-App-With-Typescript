@@ -71,6 +71,7 @@ export interface ISlotSchemaType extends Document {
   startTime: string;
   endTime: string;
   isBooked: boolean;
+  price: number;
 }
 
 export interface IReviewSchema extends Document {
@@ -88,6 +89,9 @@ export interface IAppointmentSchema extends Document {
   status: "pending" | "confirmed" | "cancelled" | "completed" | "rejected";
   payment: boolean;
   notes: string;
+  price: number;
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
+  paymentIntentId: string;
 }
 
 export type OptionEmailType = {
