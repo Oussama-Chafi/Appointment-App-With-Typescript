@@ -163,6 +163,9 @@ export const refresh = async (
         if (!findUser) {
           throw new AppError(401, "This Account is not Exist enymore");
         }
+        if(findUser.isBlocked){
+          throw new AppError(403 , "Your account is blocked right now.")
+        }
         const accessToken = jwt.sign(
           {
             userInfo: {

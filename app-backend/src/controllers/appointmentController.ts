@@ -19,27 +19,24 @@ export const bookAppointment = async (req: Request, res: Response) => {
       "This Account does not exist or is Unauthenticated!",
     );
   }
-  const getSlot = await DocSlot.findById(slotID);
+  const getSlot = await DocSlot.findOneAndUpdate(
+    { _id: slotID, isBooked: false },
+    {
+      isBooked: true,
+    },
+    { returnDocument: "after", runValidators: true },
+  );
   if (!getSlot) {
-    throw new AppError(404, "Sorry! this no slot with this ID");
+    throw new AppError(404, "This slot does not exist or has already been booked");
   }
-  if (getSlot.isBooked) {
-    throw new AppError(
-      400,
-      "This Appointment is not Available. Please choose another Slot.",
-    );
-  }
-  const price = getSlot.price as number;
+  let createAppointment;
   try {
-    const createAppointment = await Appointment.create({
+    createAppointment = await Appointment.create({
       patientID,
       doctorID: getSlot.doctorID,
       slotID,
-      price,
+      price: getSlot.price,
     });
-
-    getSlot.isBooked = true;
-    await getSlot.save();
     await createAppointment.populate([
       {
         path: "patientID",
@@ -73,6 +70,8 @@ export const bookAppointment = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
+    await DocSlot.findByIdAndUpdate(slotID, { isBooked: false }, { new: true });
+    await Appointment.findByIdAndDelete(createAppointment?._id);
     throw new AppError(400, `Booking fialed:${error.message}`);
   }
 };
@@ -134,7 +133,7 @@ export const getMyAppointment = async (req: Request, res: Response) => {
         },
       },
     ])
-    .exec();
+    .lean();
   if (myAppointment.length === 0) {
     throw new AppError(404, "You don't have any Appointments in this Time.");
   }
