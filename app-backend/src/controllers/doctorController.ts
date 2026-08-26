@@ -23,7 +23,7 @@ export const applyAsDoctor = async (req: Request, res: Response) => {
   if (!userID) {
     throw new AppError(401, "User is not authenticated");
   }
-  const existingRequest = await Doctor.findOne({ userID }).exec();
+  const existingRequest = await Doctor.findOne({ userID }).lean();
   if (existingRequest) {
     throw new AppError(400, " you have already send a Request");
   }
@@ -160,7 +160,7 @@ export const deleteDoctorSlot = async (req: Request, res: Response) => {
   if (!findDoc) {
     throw new AppError(404, "Doctor profile not found.");
   }
-  const getSlot = await DocSlot.findById(slotID).exec();
+  const getSlot = await DocSlot.findById(slotID).lean();
   if (!getSlot) {
     throw new AppError(404, "This slot not found ");
   }
@@ -240,7 +240,7 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
       },
       { path: "slotID", select: "date startTime endTime" },
     ])
-    .exec();
+    .lean();
   if (docAppointment.length === 0) {
     throw new AppError(404, "You have no Appointment booked yet.");
   }
@@ -308,7 +308,7 @@ export const getDoctorProfile = async (req: Request, res: Response) => {
   }
   const getProfile = await Doctor.findById(doctorID)
     .populate("userID", "first_name last_name email avatar gender")
-    .exec();
+    .lean();
   if (!getProfile) {
     throw new AppError(404, "Doctor Profile not found!");
   }

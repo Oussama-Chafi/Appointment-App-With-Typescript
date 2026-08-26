@@ -91,7 +91,7 @@ export interface IAppointmentSchema extends Document {
   notes: string;
   price: number;
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
-  paymentIntentId: string;
+  paymentIntentId: string | null;
 }
 
 export type OptionEmailType = {

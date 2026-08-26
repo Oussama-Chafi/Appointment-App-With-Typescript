@@ -6,7 +6,7 @@ import User from "../models/userSchema.js";
 import { Doctor } from "../models/doctorSchema.js";
 import { getStripeInstance } from "../config/stripe.js";
 import { generateStripeSession } from "../utils/stripeService.js";
-
+import mongoose from "mongoose";
 export const bookAppointment = async (req: Request, res: Response) => {
   const slotID = req.params.slotID as string;
   const patientID = req.user?.id;
@@ -27,7 +27,10 @@ export const bookAppointment = async (req: Request, res: Response) => {
     { returnDocument: "after", runValidators: true },
   );
   if (!getSlot) {
-    throw new AppError(404, "This slot does not exist or has already been booked");
+    throw new AppError(
+      404,
+      "This slot does not exist or has already been booked",
+    );
   }
   let createAppointment;
   try {
@@ -147,47 +150,74 @@ export const getMyAppointment = async (req: Request, res: Response) => {
 };
 
 export const cancelAppointment = async (req: Request, res: Response) => {
-  const appointmentID = req.params.appointmentID as string;
+  const patientID = req.user?.id;
+  const appointmentID = req.params.appointmentId as string;
   if (!appointmentID) {
-    throw new AppError(400, "Please add ID of this Appointment");
+    throw new AppError(400, "appointment id is required");
+  }
+  if (!patientID) {
+    throw new AppError(401, "you are unauthenticated");
   }
   const getAppointment = await Appointment.findById(appointmentID).exec();
   if (!getAppointment) {
-    throw new AppError(404, "There is no Appointment with this ID!");
-  }
-  const patientID = req.user?.id;
-  if (!patientID) {
-    throw new AppError(401, "you should log in first.");
+    throw new AppError(404, "no appointment exist with this id");
   }
   if (getAppointment.patientID.toString() !== patientID) {
+    throw new AppError(403, "this not your appointment");
+  }
+  if (getAppointment.status === "cancelled") {
+    throw new AppError(400, "this appointment is already cancelled");
+  }
+  if (getAppointment.status === "completed") {
     throw new AppError(
-      403,
-      "You don't have The Premission to cancel this Appointment.",
+      400,
+      "you cannot cancel an appointment that already completed",
     );
   }
-  if (getAppointment.status !== "cancelled") {
-    if (getAppointment.payment && getAppointment.paymentIntentId) {
-      try {
-        const stripe = getStripeInstance();
-        await stripe.refunds.create({
-          payment_intent: getAppointment.paymentIntentId,
-        });
-        getAppointment.paymentStatus = "refunded";
-      } catch (error: any) {
-        throw new AppError(400, `Refund faild: ${error.message}`);
-      }
+  const isPaid =
+    getAppointment.status === "confirmed" &&
+    getAppointment.payment &&
+    getAppointment.paymentStatus === "paid" &&
+    getAppointment.paymentIntentId;
+  if (isPaid) {
+    try {
+      const stripe = getStripeInstance();
+      await stripe.refunds.create({
+        payment_intent: getAppointment.paymentIntentId!,
+      });
+      getAppointment.paymentStatus = "refunded";
+      getAppointment.payment = false;
+      getAppointment.paymentIntentId = null;
+    } catch (error: any) {
+      throw new AppError(
+        400,
+        error.message || "something went wrong please try again later",
+      );
     }
-    getAppointment.status = "cancelled";
-    await getAppointment.save();
-    await DocSlot.findByIdAndUpdate(getAppointment.slotID, {
-      isBooked: false,
-    });
-  } else {
-    throw new AppError(400, "This Appointment is already cancelled.");
   }
-
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      getAppointment.status = "cancelled";
+      await getAppointment.save({ session });
+      if (getAppointment.slotID) {
+        await DocSlot.findByIdAndUpdate(
+          getAppointment.slotID,
+          { isBooked: false },
+          { session },
+        );
+      }
+    });
+  } catch (error: any) {
+    throw new AppError(
+      400,
+      error.message || "something went wrong please try again later",
+    );
+  } finally {
+    await session.endSession();
+  }
   res.status(200).json({
     success: true,
-    message: "The Appointment has been cancelled successfully.",
+    message: "the appointment has been cancelled successfully",
   });
 };

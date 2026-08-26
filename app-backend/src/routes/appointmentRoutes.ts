@@ -10,7 +10,7 @@ const router = express();
 router.route("/book/:slotID").post(verifyToken, bookAppointment);
 router.route("/my-appointments").get(verifyToken, getMyAppointment);
 router
-  .route("/cancel-appointment/:appointmentID")
+  .route("/cancel-appointment/:appointmentId")
   .post(verifyToken, cancelAppointment);
 
 export default router;
