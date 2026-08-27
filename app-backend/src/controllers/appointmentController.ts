@@ -7,6 +7,7 @@ import { Doctor } from "../models/doctorSchema.js";
 import { getStripeInstance } from "../config/stripe.js";
 import { generateStripeSession } from "../utils/stripeService.js";
 import mongoose from "mongoose";
+
 export const bookAppointment = async (req: Request, res: Response) => {
   const slotID = req.params.slotID as string;
   const patientID = req.user?.id;
@@ -84,68 +85,68 @@ export const getMyAppointment = async (req: Request, res: Response) => {
   if (!patientID) {
     throw new AppError(401, "You should log in first!");
   }
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
   const skip = (page - 1) * limit;
   const search = (req.query.search as string)?.trim() || "";
   let filterMyAppointments: any = { patientID };
 
   if (search.length > 0) {
-    const matchingUser = await User.find({
-      $or: [
-        { first_name: { $regex: search, $options: "i" } },
-        { last_name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ],
-    }).select("_id");
-    const userID = matchingUser.map((user) => user._id);
-    const matchingDoctor = await Doctor.find({ userID: { $in: userID } });
-
-    const doctorIds = matchingDoctor.map((doc) => doc._id);
-
-    const matchingDate = await DocSlot.find({
-      date: {
-        $regex: search,
-        $options: "i",
-      },
-    }).select("_id");
-
-    const slotIds = matchingDate.map((date) => date._id);
-
+    const [matchingDoctor, matchingDate] = await Promise.all([
+      User.find({
+        $or: [
+          { first_name: { $regex: search, $options: "i" } },
+          { last_name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      })
+        .select("_id")
+        .then((users) =>
+          Doctor.find({
+            userID: { $in: users.map((user) => user._id) },
+          }).select("_id"),
+        ),
+      DocSlot.find({ date: { $regex: search, $options: "i" } }).select("_id"),
+    ]);
+    const doctorIds = matchingDoctor.map((docId) => docId._id);
+    const slotIds = matchingDate.map((slotId) => slotId._id);
     filterMyAppointments.$or = [
       { doctorID: { $in: doctorIds } },
       { slotID: { $in: slotIds } },
     ];
   }
 
-  const myAppointment = await Appointment.find(filterMyAppointments)
-    .skip(skip)
-    .limit(limit)
-    .populate([
-      {
-        path: "patientID",
-        select: "first_name last_name email avatar phone gender",
-      },
-      { path: "slotID", select: "date startTime endTime" },
-      {
-        path: "doctorID",
-        select: "specialty address phone consultationFee userID",
-        populate: {
-          path: "userID",
-          select: "first_name last_name email avatar gender",
+  const [myAppointments, totalAppointments] = await Promise.all([
+    await Appointment.find(filterMyAppointments)
+      .skip(skip)
+      .limit(limit)
+      .populate([
+        {
+          path: "patientID",
+          select: "first_name last_name email avatar phone gender",
         },
-      },
-    ])
-    .lean();
-  if (myAppointment.length === 0) {
-    throw new AppError(404, "You don't have any Appointments in this Time.");
-  }
+        { path: "slotID", select: "date startTime endTime" },
+        {
+          path: "doctorID",
+          select: "specialty address phone consultationFee userID",
+          populate: {
+            path: "userID",
+            select: "first_name last_name email avatar gender",
+          },
+        },
+      ])
+      .lean(),
+    Appointment.countDocuments(filterMyAppointments),
+  ]);
 
   res.status(200).json({
     success: true,
-    message: "This is all your Appointments",
-    AppointmentsLength: myAppointment.length,
-    data: myAppointment,
+    message: "fetched your appointments successfully",
+    results: myAppointments.length,
+    total: totalAppointments,
+    page,
+    totalPages: Math.ceil(totalAppointments / limit),
+    data: myAppointments,
   });
 };
 
