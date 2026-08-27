@@ -22,7 +22,7 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
   }
   if (event?.type === "checkout.session.completed") {
     const session = event.data.object;
-    const appointmentID = session.client_reference_id;
+    const appointmentID = session.client_reference_id!;
     const paymentIntent = session.payment_intent;
     if (appointmentID && paymentIntent) {
       await Appointment.findByIdAndUpdate(appointmentID, {

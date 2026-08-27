@@ -4,7 +4,8 @@ import { AppError } from "../utils/AppError.js";
 import User from "../models/userSchema.js";
 import Appointment from "../models/appointmentSchema.js";
 import DocSlot from "../models/slotSchema.js";
-
+import { getStripeInstance } from "../config/stripe.js";
+import mongoose from "mongoose";
 export const getPendingDoctorRequest = async (req: Request, res: Response) => {
   const pendingRequest = await Doctor.find({ status: "pending" })
     .populate("userID", "first_name last_name email phone gender avatar")
@@ -172,6 +173,73 @@ export const getAppointments = async (req: Request, res: Response) => {
     message: "This all appointments in the app",
     appointmentsLength: getAppointment.length,
     getAppointment,
+  });
+};
+
+export const cancelAppointmentByAdmin = async (req: Request, res: Response) => {
+  const appointmentID = req.params.appointmentId as string;
+
+  if (!appointmentID) {
+    throw new AppError(400, "appointment id is required");
+  }
+  const getAppointment = await Appointment.findById(appointmentID).exec();
+  if (!getAppointment) {
+    throw new AppError(404, "appointment not found");
+  }
+  if (getAppointment.status === "cancelled") {
+    throw new AppError(400, "this appointment is already cancelled");
+  }
+  if (getAppointment.status === "completed") {
+    throw new AppError(
+      400,
+      "you cannot cancel an appointment has already completed",
+    );
+  }
+  const isPaid =
+    getAppointment.status === "confirmed" &&
+    getAppointment.payment &&
+    getAppointment.paymentStatus === "paid" &&
+    getAppointment.paymentIntentId;
+  if (isPaid) {
+    try {
+      const stripe = getStripeInstance();
+      await stripe.refunds.create({
+        payment_intent: getAppointment.paymentIntentId!,
+      });
+      getAppointment.paymentStatus = "refunded";
+      getAppointment.payment = false;
+      getAppointment.paymentIntentId = null;
+    } catch (error: any) {
+      throw new AppError(
+        400,
+        error.message || "seomthing went wrong please try again later",
+      );
+    }
+  }
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      getAppointment.status = "cancelled";
+      await getAppointment.save({ session });
+      if (getAppointment.slotID) {
+        await DocSlot.findByIdAndUpdate(
+          getAppointment.slotID,
+          { isBooked: false },
+          { session },
+        );
+      }
+    });
+  } catch (error: any) {
+    throw new AppError(
+      400,
+      error.message || "seomthing went wrong please try again later",
+    );
+  } finally {
+    await session.endSession();
+  }
+  res.status(200).json({
+    success: true,
+    message: "the appointment has been cancelled successfully",
   });
 };
 

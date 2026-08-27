@@ -1,6 +1,7 @@
 import express from "express";
 import { allowedTo, verifyToken } from "../middlewares/verifyToken.js";
 import {
+  cancelAppointmentByAdmin,
   deleteAnAccount,
   getAllDoctors,
   getAllPatients,
@@ -28,6 +29,9 @@ router
 router
   .route("/all-appointments")
   .get(verifyToken, allowedTo("admin"), getAppointments);
+router
+  .route("/cancel-appointment/:appointmentId")
+  .patch(verifyToken, allowedTo("admin"), cancelAppointmentByAdmin);
 router
   .route("/update-role/:userId")
   .patch(verifyToken, allowedTo("admin"), updateRoleOfUser);
