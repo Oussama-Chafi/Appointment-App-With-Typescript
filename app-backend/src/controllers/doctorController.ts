@@ -254,58 +254,69 @@ export const deleteManyDoctorSlots = async (req: Request, res: Response) => {
 
 export const getDoctorAppointments = async (req: Request, res: Response) => {
   const userID = req.user?.id;
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
+  if (!userID) {
+    throw new AppError(401, "you should log in first");
+  }
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
   const search = (req.query.search as string)?.trim() || "";
   const skip = (page - 1) * limit;
 
-  if (!userID) {
-    throw new AppError(401, "You should Log in first.");
-  }
-  const findDoc = await Doctor.findOne({ userID }).exec();
+  const findDoc = await Doctor.findOne({ userID }).lean();
   if (!findDoc) {
     throw new AppError(404, "Doctor Profile not found!");
   }
-  let queryFilter: any = { doctorID: findDoc._id };
+
+  let searchFilter: any = { doctorID: findDoc._id };
+
   if (search.length > 0) {
-    const matchingDate = await DocSlot.find({
-      date: { $regex: search, $options: "i" },
-    }).select("_id");
+    const [matchingPatient, matchingDate] = await Promise.all([
+      User.find({
+        $or: [
+          { first_name: { $regex: search, $options: "i" } },
+          { last_name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      })
+        .select("_id")
+        .lean(),
+      DocSlot.find({
+        doctorID: findDoc._id,
+        date: { $regex: search, $options: "i" },
+      })
+        .select("_id")
+        .lean(),
+    ]);
+    const userIds = matchingPatient.map((user) => user._id);
     const slotIds = matchingDate.map((date) => date._id);
 
-    const matchingPatient = await User.find({
-      $or: [
-        { first_name: { $regex: search, $options: "i" } },
-        { last_name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ],
-    }).select("_id");
-    const userIds = matchingPatient.map((patient) => patient._id);
-    queryFilter.$or = [
-      { slotID: { $in: slotIds } },
+    searchFilter.$or = [
       { patientID: { $in: userIds } },
+      { slotID: { $in: slotIds } },
     ];
   }
-  const docAppointment = await Appointment.find(queryFilter)
-    .skip(skip)
-    .limit(limit)
-    .populate([
-      {
-        path: "patientID",
-        select: "first_name last_name email avatar phone gender",
-      },
-      { path: "slotID", select: "date startTime endTime" },
-    ])
-    .lean();
-  if (docAppointment.length === 0) {
-    throw new AppError(404, "You have no Appointment booked yet.");
-  }
-
+  const [docAppointments, totalDocAppointments] = await Promise.all([
+    Appointment.find(searchFilter)
+      .skip(skip)
+      .limit(limit)
+      .populate([
+        {
+          path: "patientID",
+          select: "first_name last_name email phone avatar gender",
+        },
+        { path: "slotID", select: "date startTime endTime price" },
+      ])
+      .lean(),
+    Appointment.countDocuments(searchFilter),
+  ]);
   res.status(200).json({
     success: true,
-    message: "This is all your Appointments",
-    appointmentsLength: docAppointment.length,
-    data: docAppointment,
+    message: "Your appointments",
+    results: docAppointments.length,
+    total: totalDocAppointments,
+    page,
+    totalPages: Math.ceil(totalDocAppointments / limit),
+    data: docAppointments,
   });
 };
 
