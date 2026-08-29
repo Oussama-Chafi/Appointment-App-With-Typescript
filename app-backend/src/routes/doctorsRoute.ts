@@ -2,6 +2,7 @@ import express from "express";
 import { allowedTo, verifyToken } from "../middlewares/verifyToken.js";
 import {
   addDoctorSlots,
+  allDoctors,
   applyAsDoctor,
   deleteDoctorSlot,
   deleteManyDoctorSlots,
@@ -22,7 +23,7 @@ router.route("/app-as-doctor").post(verifyToken, applyAsDoctor);
 router
   .route("/add-slots")
   .post(verifyToken, allowedTo("doctor"), addDoctorSlots);
-router.route("/available-slots/:doctorID").get(getAvailableSlots);
+router.route("/available-slots/:doctorId").get(getAvailableSlots);
 router
   .route("/appointments/my-appointments")
   .get(verifyToken, allowedTo("doctor"), getDoctorAppointments);
@@ -50,4 +51,6 @@ router
     allowedTo("doctor"),
     deleteManyDoctorSlots,
   );
+
+router.route("/all-doctors").get(allDoctors);
 export default router;

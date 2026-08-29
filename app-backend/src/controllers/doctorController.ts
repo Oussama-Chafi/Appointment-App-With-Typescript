@@ -9,6 +9,7 @@ import DocSlot from "../models/slotSchema.js";
 import Appointment from "../models/appointmentSchema.js";
 import { Types } from "mongoose";
 import User from "../models/userSchema.js";
+import { populate } from "dotenv";
 
 export const applyAsDoctor = async (req: Request, res: Response) => {
   const { error, value } = applyAsDoctorVali.validate(req.body);
@@ -112,43 +113,98 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
   });
 };
 
-export const getAvailableSlots = async (req: Request, res: Response) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
+export const allDoctors = async (req: Request, res: Response) => {
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
   const skip = (page - 1) * limit;
   const search = (req.query.search as string)?.trim() || "";
+  let filterDoctors: any = {};
 
-  const doctorID = req.params.doctorID as string;
-  const today = new Date().toISOString().split("T")[0];
-  const dateFilter: any = { $gte: today };
   if (search.length > 0) {
-    dateFilter.$regex = search;
-    dateFilter.$options = "i";
+    const getDoctor = await User.find({
+      $or: [
+        { first_name: { $regex: search, $options: "i" } },
+        { last_name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ],
+    }).select("_id");
+    const userIds = getDoctor.map((user) => user._id);
+    filterDoctors.$or = [
+      { userID: { $in: userIds } },
+      { specialty: { $regex: search, $options: "i" } },
+    ];
   }
-  const availableSlots = await DocSlot.find({
-    doctorID,
-    isBooked: false,
-    date: dateFilter,
-  })
-    .skip(skip)
-    .limit(limit)
-    .populate([
-      {
-        path: "doctorID",
-        select:
-          "speciality phone address consultationFee isAcceptingAppointments averageRating numOfReviews userID",
-        populate: {
-          path: "userID",
-          select: "first_name last_name email avatar gender",
-        },
-      },
-    ]);
-  if (availableSlots.length === 0) {
-    throw new AppError(404, "No Slots found .");
-  }
+  const [doctors, totalDoctors] = await Promise.all([
+    Doctor.find(filterDoctors)
+      .skip(skip)
+      .limit(limit)
+      .populate("userID", "first_name last_name email avatar gender"),
+    Doctor.countDocuments(filterDoctors),
+  ]);
   res.status(200).json({
     success: true,
-    message: "All slots available retrieved successfully.",
+    message: "Doctors retrieved successfully",
+    results: doctors.length,
+    total: totalDoctors,
+    page,
+    totalPages: Math.ceil(totalDoctors / limit),
+    data: doctors,
+  });
+};
+
+export const getAvailableSlots = async (req: Request, res: Response) => {
+  const doctorID = (req.params.doctorId as string).trim();
+  if (!doctorID) {
+    throw new AppError(400, "Doctor ID is required");
+  }
+  const findDoc = await Doctor.findById(doctorID).lean();
+  if (!findDoc) {
+    throw new AppError(404, "Doctor profile not found ");
+  }
+  const page = Math.max(1, parseInt(req.params.page as string) || 1);
+  const limit = Math.max(1, parseInt(req.params.limit as string) || 10);
+  const skip = (page - 1) * limit;
+  const search = (req.params.search as string)?.trim() || "";
+  const today = new Date().toISOString().split("T")[0] as string;
+  const searchFilter: any = {
+    doctorID,
+    isBooked: false,
+    date: { $gte: today },
+  };
+
+  if (search.length > 0) {
+    searchFilter.date = {
+      $gte: today,
+      $regex: search,
+      $options: "i",
+    };
+  }
+
+  const [availableSlots, totalSlots] = await Promise.all([
+    DocSlot.find(searchFilter)
+      .skip(skip)
+      .limit(limit)
+      .populate([
+        {
+          path: "doctorID",
+          select:
+            "speciality phone address consultationFee isAcceptingAppointments averageRating numOfReviews userID",
+          populate: {
+            path: "userID",
+            select: "first_name last_name email avatar gender",
+          },
+        },
+      ]),
+    DocSlot.countDocuments(searchFilter),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    message: "Availabel slots",
+    results: availableSlots.length,
+    total: totalSlots,
+    page,
+    totalPages: Math.ceil(totalSlots / limit),
     data: availableSlots,
   });
 };
@@ -156,7 +212,7 @@ export const getAvailableSlots = async (req: Request, res: Response) => {
 export const deleteDoctorSlot = async (req: Request, res: Response) => {
   const slotID = req.params.slotID as string;
   const userID = req.user?.id as string;
-  const findDoc = await Doctor.findOne({ userID }).exec();
+  const findDoc = await Doctor.findOne({ userID }).lean();
   if (!findDoc) {
     throw new AppError(404, "Doctor profile not found.");
   }
@@ -164,10 +220,10 @@ export const deleteDoctorSlot = async (req: Request, res: Response) => {
   if (!getSlot) {
     throw new AppError(404, "This slot not found ");
   }
-  if (getSlot?.isBooked) {
+  if (getSlot.isBooked) {
     throw new AppError(400, "Cannot delete a slot that is already booked!");
   }
-  if (findDoc._id.toString() !== getSlot?.doctorID.toString()) {
+  if (findDoc._id.toString() !== getSlot.doctorID.toString()) {
     throw new AppError(403, "You cannot delete another doctor's slots!");
   }
   await DocSlot.findByIdAndDelete(slotID);
