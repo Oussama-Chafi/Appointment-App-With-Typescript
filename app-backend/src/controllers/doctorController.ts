@@ -330,7 +330,7 @@ export const updateAppointmentStatus = async (req: Request, res: Response) => {
   if (!userID) {
     throw new AppError(401, "You should Log in first!");
   }
-  const findDoc = await Doctor.findOne({ userID }).exec();
+  const findDoc = await Doctor.findOne({ userID }).lean();
 
   if (!findDoc) {
     throw new AppError(404, "Doctor Profile not found!");
@@ -346,10 +346,10 @@ export const updateAppointmentStatus = async (req: Request, res: Response) => {
     );
   }
 
-  if (getAppointment.status === "rejected") {
+  if (["rejected", "completed", "cancelled"].includes(getAppointment.status)) {
     throw new AppError(
       400,
-      "You cannot update an Appointment that has already been rejected!",
+      `cannot update an appointment that is ${getAppointment.status}`,
     );
   }
   if (status === "rejected") {
@@ -401,20 +401,36 @@ export const updateDoctorProfile = async (req: Request, res: Response) => {
   if (req.body.status) {
     throw new AppError(403, "Only admin can update the status of you.");
   }
-  if (req.body.averageRating || req.body.numOfReviews) {
+  if (req.body.averageRating || req.body.numOfReviews || req.body.userID) {
     throw new AppError(
       400,
       "You can't update the rating and the number of reviews!",
     );
   }
+  const allowedUpdates = [
+    "speciality",
+    "phone",
+    "address",
+    "consultationFee",
+    "isAcceptingAppointments",
+    "bio",
+  ];
+
+  const updateData: Record<string, any> = {};
+  Object.keys(req.body).forEach((key) => {
+    if (allowedUpdates.includes(key)) {
+      updateData[key] = req.body[key];
+    }
+  });
+
+  if (Object.keys(updateData).length === 0) {
+    throw new AppError(400, "No valid fields provided for update.");
+  }
   const updateProfile = await Doctor.findByIdAndUpdate(
-    doctorID,
-    { $set: req.body },
+    findDoc._id,
+    { $set: updateData },
     { new: true, runValidators: true },
   );
-  if (!updateProfile) {
-    throw new AppError(404, "Doctor profile not found!");
-  }
 
   res.status(200).json({
     success: true,
