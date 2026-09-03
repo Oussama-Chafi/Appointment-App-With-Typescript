@@ -9,21 +9,22 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
   const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET as string;
   if (!sig || !webhookSecret) {
-    throw new AppError(
-      400,
-      "You are Missing webhook secret key in the env file or signature of stripe",
-    );
+    return res.status(400).json({
+      success: false,
+      message:
+        "You are Missing webhook secret key in the env file or signature of stripe",
+    });
   }
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (error: any) {
-    throw new AppError(400, `Webhook Error: ${error.message}`);
+    return res.status(400).send(`webhook Error ${error.message}`);
   }
   if (event?.type === "checkout.session.completed") {
     const session = event.data.object;
     const appointmentID = session.client_reference_id!;
-    const paymentIntent = session.payment_intent;
+    const paymentIntent = session.payment_intent as string;
     if (appointmentID && paymentIntent) {
       await Appointment.findByIdAndUpdate(appointmentID, {
         payment: true,
@@ -66,7 +67,7 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
       }
     }
   }
-  res.status(200).json({
+  return res.status(200).json({
     success: true,
     recieved: true,
   });
