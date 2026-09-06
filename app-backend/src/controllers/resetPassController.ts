@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 
 export const resetPass = async (req: Request, res: Response) => {
   const resetToken = req.query.token as string;
-  const { newPassword } = req.body;
+  const newPassword  = req.body.newPassword as string;
   if (!resetToken || !newPassword) {
     throw new AppError(400, "Reset token and the new password are required!");
   }
@@ -36,8 +36,10 @@ export const resetPass = async (req: Request, res: Response) => {
     first_name: getUser.first_name,
     last_name: getUser.last_name,
     verificationTokenExpiry: getUser.verificationTokenExpiry,
-    verificationToken: getUser.verificationToken,
     isVerified: getUser.isVerified,
+    avatar : getUser.avatar,
+    gender : getUser.gender,
+    phone : getUser.phone,
   };
 
   res.status(200).json({

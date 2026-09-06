@@ -5,7 +5,7 @@ import crypto from "crypto";
 import sendEmail from "../utils/SendEmail.js";
 
 export const forgetPass = async (req: Request, res: Response) => {
-  const { email } = req.body;
+  const email= req.body.email as string;
   if (!email) {
     throw new AppError(400, "Email address is required.");
   }
@@ -47,8 +47,10 @@ export const forgetPass = async (req: Request, res: Response) => {
     first_name: getUser.first_name,
     last_name: getUser.last_name,
     verificationTokenExpiry: getUser.verificationTokenExpiry,
-    verificationToken: getUser.verificationToken,
     isVerified: getUser.isVerified,
+    avatar : getUser.avatar,
+    gender : getUser.gender,
+    phone : getUser.phone,
   };
   res.status(200).json({
     success: true,
