@@ -5,7 +5,8 @@ import User from "../models/userSchema.js";
 import Appointment from "../models/appointmentSchema.js";
 import DocSlot from "../models/slotSchema.js";
 import { getStripeInstance } from "../config/stripe.js";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
+
 export const getPendingDoctorRequest = async (req: Request, res: Response) => {
   const pendingRequest = await Doctor.find({ status: "pending" })
     .populate("userID", "first_name last_name email phone gender avatar")
@@ -19,14 +20,18 @@ export const getPendingDoctorRequest = async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: "This is all requests in DB",
+    results: pendingRequest.length,
     pendingRequest,
   });
 };
 
 export const updateDoctorStatus = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const { status } = req.body;
 
+  if (!id || !Types.ObjectId.isValid(id)) {
+    throw new AppError(400, "Invalid ID format");
+  }
   if (!["approved", "rejected"].includes(status)) {
     throw new AppError(400, "Invalid status parameter");
   }
@@ -38,9 +43,9 @@ export const updateDoctorStatus = async (req: Request, res: Response) => {
   if (status === "approved") {
     findDocReq.status = status;
     await findDocReq.save();
-    const updateRole = await User.findByIdAndUpdate(findDocReq.userID, {
+    await User.findByIdAndUpdate(findDocReq.userID, {
       role: "doctor",
-    });
+    }).lean();
 
     await findDocReq.populate(
       "userID",
@@ -56,42 +61,47 @@ export const updateDoctorStatus = async (req: Request, res: Response) => {
     await Doctor.findByIdAndDelete(id);
     res.status(200).json({
       success: true,
-      message: " This request has been deleteModel.",
+      message: " Doctor request has been rejected and deleted.",
     });
   }
 };
 
 export const getAllPatients = async (req: Request, res: Response) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
   const skip = (page - 1) * limit;
-  const search = (req.query.search as string) || "";
+  const search = (req.query.search as string)?.trim() || "";
 
-  const getPatients = await User.find({
-    role: "patient",
-    $or: [
-      { first_name: { $regex: search, $options: "i" } },
-      { last_name: { $regex: search, $options: "i" } },
-      { email: { $regex: search, $options: "i" } },
-    ],
-  })
-    .select("-password")
-    .skip(skip)
-    .limit(limit)
-    .exec();
+  const searchQuery = {
+    role: "patient" as const,
+    ...(search.length > 0 && {
+      $or: [
+        { first_name: { $regex: search, $options: "i" } },
+        { last_name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ],
+    }),
+  };
+
+  const [getPatients, totalPatient] = await Promise.all([
+    User.find(searchQuery).select("-password").skip(skip).limit(limit).lean(),
+    User.countDocuments(searchQuery),
+  ]);
   res.status(200).json({
     success: true,
-    message: "This is all patients in the app",
-    patientLength: getPatients.length,
-    getPatients,
+    results: getPatients.length,
+    total: totalPatient,
+    totalPages: Math.ceil(totalPatient / limit),
+    page,
+    data: getPatients,
   });
 };
 
 export const getAllDoctors = async (req: Request, res: Response) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
   const skip = (page - 1) * limit;
-  const search = (req.query.search as string) || "";
+  const search = (req.query.search as string)?.trim() || "";
   let filterDoctor = {};
 
   if (search.length > 0) {
@@ -101,86 +111,112 @@ export const getAllDoctors = async (req: Request, res: Response) => {
         { last_name: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } },
       ],
-    }).select("_id");
-    const userIDs = matchingUser.map((user) => user._id);
-    filterDoctor = { userID: { $in: userIDs } };
+    })
+      .select("_id")
+      .lean();
+    filterDoctor = {
+      $or: [
+        { userID: { $in: matchingUser.map((user) => user._id) } },
+        { specialty: { $regex: search, $options: "i" } },
+      ],
+    };
   }
-
-  const getDoctors = await Doctor.find(filterDoctor)
-    .skip(skip)
-    .limit(limit)
-    .populate("userID", "first_name last_name email avatar gender")
-    .exec();
+  const [getDoctors, totalDoctors] = await Promise.all([
+    Doctor.find(filterDoctor)
+      .skip(skip)
+      .lean()
+      .limit(limit)
+      .populate(
+        "userID",
+        "first_name last_name email gender avatar phone role isBlocked isVerified",
+      ),
+    Doctor.countDocuments(filterDoctor),
+  ]);
   res.status(200).json({
     success: true,
-    message: "This is all doctors in the app",
-    doctorLength: getDoctors.length,
-    getDoctors,
+    message: "All Doctors",
+    results: getDoctors.length,
+    total: totalDoctors,
+    totalPages: Math.ceil(totalDoctors / limit),
+    page,
+    data: getDoctors,
   });
 };
 
 export const getAppointments = async (req: Request, res: Response) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.max(10, parseInt(req.query.limit as string) || 10);
   const skip = (page - 1) * limit;
-  const search = (req.query.search as string) || "";
+  const search = (req.query.search as string)?.trim() || "";
   let queryFilter = {};
 
   if (search.length > 0) {
-    const matchingUser = await User.find({
-      $or: [
-        { first_name: { $regex: search, $options: "i" } },
-        { last_name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ],
-    }).select("_id");
+    const [matchingUser, matchingDate] = await Promise.all([
+      User.find({
+        $or: [
+          { first_name: { $regex: search, $options: "i" } },
+          { last_name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      }).select("_id"),
+      DocSlot.find({
+        date: { $regex: search, $options: "i" },
+      }).select("_id"),
+    ]);
     const userIDs = matchingUser.map((user) => user._id);
+    const dateIDs = matchingDate.map((date) => date._id);
 
-    const matchnigDate = await DocSlot.find({
-      date: {
-        $regex: search,
-        $options: "i",
-      },
-    }).select("_id");
-    const dates = matchnigDate.map((date) => date._id);
+    const matchingDoctor = await Doctor.find({
+      userID: { $in: userIDs.map((user) => user._id) },
+    }).select("_id").lean();
+    const docIDs = matchingDoctor.map((doc) => doc._id);
+
     queryFilter = {
       $or: [
         { patientID: { $in: userIDs } },
-        { doctorID: { $in: userIDs } },
-        { slotID: { $in: dates } },
+        { doctorID: { $in: docIDs } },
+        { slotID: { $in: dateIDs } },
       ],
     };
   }
 
-  const getAppointment = await Appointment.find(queryFilter)
-    .skip(skip)
-    .limit(limit)
-    .populate([
-      { path: "patientID", select: "first_name last_name email phone gender" },
-      { path: "slotID", select: "date startTime endTime isBooked" },
-      {
-        path: "doctorID",
-        select:
-          "address phone specialty consultationFee isAcceptingAppointments status averageRating numOfReviews userID",
-        populate: {
-          path: "userID",
-          select: "first_name last_name email avatar gender",
+  const [getAppointments, totalAppointments] = await Promise.all([
+    await Appointment.find(queryFilter)
+      .skip(skip)
+      .limit(limit)
+      .populate([
+        {
+          path: "patientID",
+          select: "first_name last_name email phone gender avatar phone isVerified isBlocked",
         },
-      },
-    ]);
+        { path: "slotID", select: "date startTime endTime isBooked" },
+        {
+          path: "doctorID",
+          select:
+            "address phone specialty consultationFee isAcceptingAppointments status averageRating numOfReviews userID",
+          populate: {
+            path: "userID",
+            select: "first_name last_name email avatar gender phone ",
+          },
+        },
+      ]),
+    Appointment.countDocuments(queryFilter),
+  ]);
   res.status(200).json({
     success: true,
     message: "This all appointments in the app",
-    appointmentsLength: getAppointment.length,
-    getAppointment,
+    result: getAppointments.length,
+    totalPages: Math.ceil(totalAppointments / limit),
+    page,
+    data: getAppointments,
   });
 };
 
 export const cancelAppointmentByAdmin = async (req: Request, res: Response) => {
   const appointmentID = req.params.appointmentId as string;
 
-  if (!appointmentID) {
-    throw new AppError(400, "appointment id is required");
+  if (!appointmentID || !Types.ObjectId.isValid(appointmentID)) {
+    throw new AppError(400, "Valid appointment id is required");
   }
   const getAppointment = await Appointment.findById(appointmentID).exec();
   if (!getAppointment) {
@@ -239,7 +275,8 @@ export const cancelAppointmentByAdmin = async (req: Request, res: Response) => {
   }
   res.status(200).json({
     success: true,
-    message: "the appointment has been cancelled successfully",
+    message:
+      "the appointment has been cancelled successfully and refunded if paid",
   });
 };
 
@@ -247,10 +284,13 @@ export const updateRoleOfUser = async (req: Request, res: Response) => {
   const userID = req.params.userId as string;
   const { newRole } = req.body;
   if (!newRole || !["user", "doctor", "admin"].includes(newRole)) {
-    throw new AppError(400, "Please the role");
+    throw new AppError(
+      400,
+      "Please provide a valid role (patient, doctor, or admin)",
+    );
   }
-  if (!userID) {
-    throw new AppError(400, "user ID is required");
+  if (!userID || !Types.ObjectId.isValid(userID)) {
+    throw new AppError(400, "Valid user ID is required");
   }
   const updateUser = await User.findByIdAndUpdate(
     userID,
@@ -258,7 +298,7 @@ export const updateRoleOfUser = async (req: Request, res: Response) => {
       role: newRole,
     },
     { returnDocument: "after", runValidators: true },
-  );
+  ).select("-password");
   if (!updateUser) {
     throw new AppError(404, "Account profile not found");
   }
@@ -272,8 +312,11 @@ export const updateRoleOfUser = async (req: Request, res: Response) => {
 export const toggleBlockUser = async (req: Request, res: Response) => {
   const userID = req.params.userId as string;
   const { isBlocked } = req.body;
-  if (!userID) {
-    throw new AppError(400, "User ID is required");
+  if (!userID || !Types.ObjectId.isValid(userID)) {
+    throw new AppError(400, "Valid user ID is required");
+  }
+  if (typeof isBlocked !== "boolean") {
+    throw new AppError(400, "Please provide isBlocked as a boolean");
   }
   const getUser = await User.findById(userID).exec();
   if (!getUser) {
@@ -281,10 +324,6 @@ export const toggleBlockUser = async (req: Request, res: Response) => {
   }
   if (getUser.role === "admin") {
     throw new AppError(403, "You cannot block an admin");
-  }
-
-  if (typeof isBlocked !== "boolean") {
-    throw new AppError(400, "Please provide isBlocked as a boolean");
   }
 
   getUser.isBlocked = isBlocked;
@@ -300,8 +339,8 @@ export const toggleBlockUser = async (req: Request, res: Response) => {
 
 export const deleteAnAccount = async (req: Request, res: Response) => {
   const userID = req.params.userId as string;
-  if (!userID) {
-    throw new AppError(400, "User ID is required");
+  if (!userID || Types.ObjectId.isValid(userID)) {
+    throw new AppError(400, "Valid user ID is required");
   }
   const getUser = await User.findById(userID).lean();
   if (!getUser) {
