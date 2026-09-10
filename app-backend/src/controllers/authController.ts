@@ -76,7 +76,7 @@ export const login = async (req: Request, res: Response) => {
   const { error, value } = loginValidation.validate(req.body);
   if (error) {
     throw new AppError(
-      401,
+      400,
       error.details[0]?.message || "you should add all information ",
     );
   }

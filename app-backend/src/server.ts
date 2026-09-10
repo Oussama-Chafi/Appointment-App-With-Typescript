@@ -22,7 +22,7 @@ import imagesRoute from "./routes/imagesRoute.js";
 import userRoute from "./routes/userRoute.js";
 import { authLimiter, globalLimiter } from "./middlewares/rateLimiter.js";
 
-const app = express();
+export const app = express();
 const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
