@@ -10,7 +10,7 @@ export const verifyToken = (
   next: NextFunction,
 ) => {
   const authHeaders = req.headers.authorization || req.headers.Authorization;
-  if (!(authHeaders as string).startsWith("Bearer ")) {
+  if (!(authHeaders as string)?.startsWith("Bearer ")) {
     throw new AppError(401, "Unthorized!");
   }
   const token = (authHeaders as string).split(" ")[1];
@@ -22,7 +22,7 @@ export const verifyToken = (
       const payload = decoded as CustomPayload;
       const currentUser = await User.findOne({
         _id: payload.userInfo.id,
-      }).select("tokenVersion");
+      }).select("tokenVersion isBlocked");
       if (
         !currentUser ||
         currentUser.tokenVersion !== payload.userInfo.tokenVersion
@@ -31,6 +31,9 @@ export const verifyToken = (
           401,
           "Session expired or logged out from all devices.",
         );
+      }
+      if (currentUser.isBlocked) {
+        throw new AppError(403, "Your account has been blocked.");
       }
       req.user = payload.userInfo;
       next();

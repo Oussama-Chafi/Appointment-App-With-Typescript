@@ -9,7 +9,7 @@ import { allowedTo, verifyToken } from "../middlewares/verifyToken.js";
 import { verifyEmail } from "../controllers/verifyEmailController.js";
 import { forgetPass } from "../controllers/forgetPassController.js";
 import { resetPass } from "../controllers/resetPassController.js";
-const router = express();
+const router = express.Router();
 
 router.route("/register").post(register);
 router.route("/login").post(login);

@@ -17,7 +17,7 @@ import {
   deleteManyDocSlotsVali,
   updateDoctorProfileVali,
 } from "../validation/doctorValidation.js";
-const router = express();
+const router = express.Router();
 
 router.route("/app-as-doctor").post(verifyToken, applyAsDoctor);
 router

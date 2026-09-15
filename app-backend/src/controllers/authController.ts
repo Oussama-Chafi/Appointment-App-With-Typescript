@@ -124,6 +124,7 @@ export const login = async (req: Request, res: Response) => {
     success: true,
     message: "welcome back",
     user: {
+      id: findUser._id,
       first_name: findUser.first_name,
       last_name: findUser.last_name,
       email: findUser.email,
@@ -163,8 +164,8 @@ export const refresh = async (
         if (!findUser) {
           throw new AppError(401, "This Account is not Exist enymore");
         }
-        if(findUser.isBlocked){
-          throw new AppError(403 , "Your account is blocked right now.")
+        if (findUser.isBlocked) {
+          throw new AppError(403, "Your account is blocked right now.");
         }
         const accessToken = jwt.sign(
           {

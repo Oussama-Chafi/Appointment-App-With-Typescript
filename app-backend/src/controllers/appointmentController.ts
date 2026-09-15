@@ -6,19 +6,16 @@ import User from "../models/userSchema.js";
 import { Doctor } from "../models/doctorSchema.js";
 import { getStripeInstance } from "../config/stripe.js";
 import { generateStripeSession } from "../utils/stripeService.js";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 export const bookAppointment = async (req: Request, res: Response) => {
   const slotID = req.params.slotID as string;
   const patientID = req.user?.id;
-  if (!slotID) {
-    throw new AppError(400, "Thre is no ID for this Slot!");
+  if (!slotID || !Types.ObjectId.isValid(slotID)) {
+    throw new AppError(400, "Slot ID is required!");
   }
   if (!patientID) {
-    throw new AppError(
-      400,
-      "This Account does not exist or is Unauthenticated!",
-    );
+    throw new AppError(400, "User ID is required!");
   }
   const getSlot = await DocSlot.findOneAndUpdate(
     { _id: slotID, isBooked: false },
@@ -57,7 +54,7 @@ export const bookAppointment = async (req: Request, res: Response) => {
       },
     ]);
     const doctor = createAppointment.doctorID as any;
-    const doctorName = `${doctor.userID.first_name} ${doctor.userID.last_name}`;
+    const doctorName = `${doctor.userID?.first_name} ${doctor.userID?.last_name}`;
     const appointmentPrice = createAppointment.price;
     const appointmentID = createAppointment._id.toString();
     const session = await generateStripeSession(
@@ -153,7 +150,7 @@ export const getMyAppointment = async (req: Request, res: Response) => {
 export const cancelAppointment = async (req: Request, res: Response) => {
   const patientID = req.user?.id;
   const appointmentID = req.params.appointmentId as string;
-  if (!appointmentID) {
+  if (!appointmentID || !Types.ObjectId.isValid(appointmentID)) {
     throw new AppError(400, "appointment id is required");
   }
   if (!patientID) {

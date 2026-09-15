@@ -5,7 +5,7 @@ import {
   cancelAppointment,
   getMyAppointment,
 } from "../controllers/appointmentController.js";
-const router = express();
+const router = express.Router();
 
 router.route("/book/:slotID").post(verifyToken, bookAppointment);
 router.route("/my-appointments").get(verifyToken, getMyAppointment);

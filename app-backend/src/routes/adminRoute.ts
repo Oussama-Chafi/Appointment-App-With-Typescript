@@ -11,7 +11,7 @@ import {
   updateDoctorStatus,
   updateRoleOfUser,
 } from "../controllers/adminController.js";
-const router = express();
+const router = express.Router();
 
 router
   .route("/doctor-requests")
