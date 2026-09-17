@@ -6,7 +6,12 @@ export const applyAsDoctorVali = joi
     consultationFee: joi.number().min(2).required(),
     specialty: joi.string().min(10).max(30).required(),
     address: joi.string().min(10).max(40).required(),
-    phone: joi.string().length(10).required(),
+    phone: joi
+      .string()
+      .length(10)
+      .required()
+      .pattern(/^\d+$/)
+      .message("phone number should be with numbers."),
   })
   .unknown(false);
 
@@ -29,11 +34,14 @@ export const addDoctorSlotsVali = joi
 
 export const updateDoctorProfileVali = joi
   .object({
-    consultationFee: joi.number().min(2).required(),
-    specialty: joi.string().min(10).max(30).required(),
-    address: joi.string().min(10).max(40).required(),
-    phone: joi.string().length(10).required(),
+    consultationFee: joi.number().min(2).optional(),
+    specialty: joi.string().min(10).max(30).optional(),
+    address: joi.string().min(10).max(40).optional(),
+    phone: joi.string().length(10).pattern(/^\d+$/).optional(),
     isAcceptingAppointments: joi.boolean().optional(),
+    bio: joi.string().min(10).max(200).optional(),
+    email: joi.string().email().optional(),
+    doctorPhone: joi.string().length(10).optional(),
   })
   .unknown(false);
 

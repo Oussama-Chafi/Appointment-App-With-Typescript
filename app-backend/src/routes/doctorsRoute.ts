@@ -29,7 +29,7 @@ router
   .get(verifyToken, allowedTo("doctor"), getDoctorAppointments);
 router
   .route("/appointments/:appointmentID/status")
-  .post(verifyToken, allowedTo("doctor"), updateAppointmentStatus);
+  .patch(verifyToken, allowedTo("doctor"), updateAppointmentStatus);
 
 router.route("/get-profile/:doctorID").get(getDoctorProfile);
 router
@@ -41,7 +41,7 @@ router
     updateDoctorProfile,
   );
 router
-  .route("/delete-slot")
+  .route("/delete-slot/:slotID")
   .delete(verifyToken, allowedTo("doctor"), deleteDoctorSlot);
 router
   .route("/delete-many-slots")

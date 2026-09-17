@@ -47,7 +47,7 @@ export const applyAsDoctor = async (req: Request, res: Response) => {
     success: true,
     message:
       "your application has been successfully submitted, and is under review.",
-    newDoctorRequest,
+    data: newDoctorRequest,
   });
 };
 
@@ -77,6 +77,9 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
   const slotsToInsert = [];
   let startHour = parseInt(startTime.split(":")[0]);
   let endHour = parseInt(endTime.split(":")[0]);
+  if (startHour >= endHour) {
+    throw new AppError(400, "The start time must be earlier than the end time");
+  }
   const safeExcludedSlotsArray = Array.isArray(excludedSlots)
     ? excludedSlots
     : [];
@@ -109,7 +112,7 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
     success: true,
     message: "Slots created Successfully.",
     slotsLength: createSlots.length,
-    createSlots,
+    data: createSlots,
   });
 };
 
@@ -154,8 +157,8 @@ export const allDoctors = async (req: Request, res: Response) => {
 
 export const getAvailableSlots = async (req: Request, res: Response) => {
   const doctorID = (req.params.doctorId as string).trim();
-  if (!doctorID) {
-    throw new AppError(400, "Doctor ID is required");
+  if (!doctorID || !Types.ObjectId.isValid(doctorID)) {
+    throw new AppError(400, " Doctor ID is required");
   }
   const findDoc = await Doctor.findById(doctorID).lean();
   if (!findDoc) {
@@ -164,7 +167,7 @@ export const getAvailableSlots = async (req: Request, res: Response) => {
   const page = Math.max(1, parseInt(req.params.page as string) || 1);
   const limit = Math.max(1, parseInt(req.params.limit as string) || 10);
   const skip = (page - 1) * limit;
-  const search = (req.params.search as string)?.trim() || "";
+  const search = (req.query.search as string)?.trim() || "";
   const today = new Date().toISOString().split("T")[0] as string;
   const searchFilter: any = {
     doctorID,
@@ -211,6 +214,9 @@ export const getAvailableSlots = async (req: Request, res: Response) => {
 
 export const deleteDoctorSlot = async (req: Request, res: Response) => {
   const slotID = req.params.slotID as string;
+  if (!slotID || !Types.ObjectId.isValid(slotID)) {
+    throw new AppError(400, "Slot ID is required.");
+  }
   const userID = req.user?.id as string;
   const findDoc = await Doctor.findOne({ userID }).lean();
   if (!findDoc) {
@@ -232,11 +238,19 @@ export const deleteDoctorSlot = async (req: Request, res: Response) => {
 
 export const deleteManyDoctorSlots = async (req: Request, res: Response) => {
   const { slotIDs } = req.body;
+  if (!Array.isArray(slotIDs) || slotIDs.length === 0) {
+    throw new AppError(400, "Please provide an array of slots IDs to delete");
+  }
   const userID = req.user?.id as string;
   const findDoc = await Doctor.findOne({ userID }).exec();
   if (!findDoc) {
     throw new AppError(404, "Doctor profile not found.");
   }
+  const hasInvalidId = slotIDs.some((id) => !Types.ObjectId.isValid(id));
+
+  if (hasInvalidId)
+    throw new AppError(400, "One or more provided slot IDs are invalid");
+
   const objectSlotIds = slotIDs.map((id: string) => new Types.ObjectId(id));
   const result = await DocSlot.deleteMany({
     _id: { $in: objectSlotIds },
@@ -244,7 +258,10 @@ export const deleteManyDoctorSlots = async (req: Request, res: Response) => {
     isBooked: false,
   });
   if (result.deletedCount === 0) {
-    throw new AppError(400, "No eligible unbooked slots were found to delete.");
+    throw new AppError(
+      400,
+      "No eligible unbooked slots were found to delete or you are not authorized to delete them.",
+    );
   }
   res.status(200).json({
     success: true,
@@ -322,7 +339,11 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
 
 export const updateAppointmentStatus = async (req: Request, res: Response) => {
   const appointmentID = req.params.appointmentID as string;
-  const { status } = req.body;
+  if (!appointmentID || !Types.ObjectId.isValid(appointmentID)) {
+    throw new AppError(400, "Invalid appointment id is required");
+  }
+  const { status }: { status: "confirmed" | "rejected" | "completed" } =
+    req.body;
   if (!["confirmed", "rejected", "completed"].includes(status)) {
     throw new AppError(400, "Add your status for this Appointment!");
   }
@@ -344,6 +365,11 @@ export const updateAppointmentStatus = async (req: Request, res: Response) => {
       403,
       "You cannot handle the Status of this Appointment.",
     );
+  }
+  if (getAppointment.status === status) {
+    return res
+      .status(200)
+      .json({ message: `this appointment has already ${status}` });
   }
 
   if (["rejected", "completed", "cancelled"].includes(getAppointment.status)) {
@@ -370,8 +396,8 @@ export const updateAppointmentStatus = async (req: Request, res: Response) => {
 
 export const getDoctorProfile = async (req: Request, res: Response) => {
   const doctorID = req.params.doctorID as string;
-  if (!doctorID) {
-    throw new AppError(400, "You should add the Doctor ID first.");
+  if (!doctorID || !Types.ObjectId.isValid(doctorID)) {
+    throw new AppError(400, "Valid doctor id is required.");
   }
   const getProfile = await Doctor.findById(doctorID)
     .populate("userID", "first_name last_name email avatar gender")
@@ -387,8 +413,8 @@ export const getDoctorProfile = async (req: Request, res: Response) => {
 
 export const updateDoctorProfile = async (req: Request, res: Response) => {
   const doctorID = req.params.doctorID as string;
-  if (!doctorID) {
-    throw new AppError(400, "You should add the Doctor ID first!");
+  if (!doctorID || !Types.ObjectId.isValid(doctorID)) {
+    throw new AppError(400, "Valid doctor id is required.");
   }
   const userID = req.user?.id as string;
   const findDoc = await Doctor.findOne({ userID }).exec();
@@ -408,13 +434,13 @@ export const updateDoctorProfile = async (req: Request, res: Response) => {
     );
   }
   const allowedUpdates = [
-    "speciality",
-    "phone",
+    "specialty",
     "address",
     "consultationFee",
     "isAcceptingAppointments",
     "bio",
   ];
+  const allowedUpdatesOfUser = ["email", "phone"];
 
   const updateData: Record<string, any> = {};
   Object.keys(req.body).forEach((key) => {
@@ -422,14 +448,33 @@ export const updateDoctorProfile = async (req: Request, res: Response) => {
       updateData[key] = req.body[key];
     }
   });
-
-  if (Object.keys(updateData).length === 0) {
+  const updateDataOfUser: Record<string, string> = {};
+  Object.keys(req.body).forEach((key) => {
+    if (allowedUpdatesOfUser.includes(key)) {
+      updateDataOfUser[key] = req.body[key];
+    }
+  });
+  if (req.body.doctorPhone) {
+    updateData.phone = req.body.doctorPhone;
+  }
+  if (
+    Object.keys(updateData).length === 0 &&
+    Object.keys(updateDataOfUser).length === 0
+  ) {
     throw new AppError(400, "No valid fields provided for update.");
   }
+  await User.findOneAndUpdate(
+    { _id: userID },
+    { $set: updateDataOfUser },
+    { new: true, runValidators: true },
+  );
   const updateProfile = await Doctor.findByIdAndUpdate(
     findDoc._id,
     { $set: updateData },
     { new: true, runValidators: true },
+  ).populate(
+    "userID",
+    "first_name last_name email phone gender isVerified verificationTokenExpiry avatar ",
   );
 
   res.status(200).json({
