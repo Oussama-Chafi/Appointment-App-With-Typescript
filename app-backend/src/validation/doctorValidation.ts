@@ -47,6 +47,10 @@ export const updateDoctorProfileVali = joi
 
 export const deleteManyDocSlotsVali = joi
   .object({
-    slotIDs: joi.array().items(joi.string().required()).min(1).required(),
+    slotIDs: joi
+      .array()
+      .items(joi.string().length(24).required())
+      .min(1)
+      .required(),
   })
   .unknown(false);

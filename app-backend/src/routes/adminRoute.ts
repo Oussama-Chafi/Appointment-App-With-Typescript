@@ -3,6 +3,8 @@ import { allowedTo, verifyToken } from "../middlewares/verifyToken.js";
 import {
   cancelAppointmentByAdmin,
   deleteAnAccount,
+  deleteManySlotsByAdmin,
+  deleteOneSlotByAdmin,
   getAllDoctors,
   getAllPatients,
   getAppointments,
@@ -11,6 +13,8 @@ import {
   updateDoctorStatus,
   updateRoleOfUser,
 } from "../controllers/adminController.js";
+import { validateBody } from "../middlewares/validationData.js";
+import { deleteManyDocSlotsVali } from "../validation/doctorValidation.js";
 const router = express.Router();
 
 router
@@ -41,5 +45,18 @@ router
 router
   .route("/delete-account/:userId")
   .delete(verifyToken, allowedTo("admin"), deleteAnAccount);
+
+router
+  .route("/delete-slot/:slotID")
+  .delete(verifyToken, allowedTo("admin"), deleteOneSlotByAdmin);
+
+router
+  .route("/delete-many-slots")
+  .delete(
+    validateBody(deleteManyDocSlotsVali),
+    verifyToken,
+    allowedTo("admin"),
+    deleteManySlotsByAdmin,
+  );
 
 export default router;
