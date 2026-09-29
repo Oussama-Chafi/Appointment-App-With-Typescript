@@ -23,10 +23,10 @@ export const verifyToken = (
       const currentUser = await User.findOne({
         _id: payload.userInfo.id,
       }).select("tokenVersion isBlocked");
-      if (
-        !currentUser ||
-        currentUser.tokenVersion !== payload.userInfo.tokenVersion
-      ) {
+      if (!currentUser) {
+        throw new AppError(404, "User account not found!");
+      }
+      if (currentUser.tokenVersion !== payload.userInfo.tokenVersion) {
         throw new AppError(
           401,
           "Session expired or logged out from all devices.",

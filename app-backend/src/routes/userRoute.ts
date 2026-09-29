@@ -12,18 +12,24 @@ import {
   changePasswordVali,
   updateUserVali,
 } from "../validation/userValidation.js";
+import { authLimiter } from "../middlewares/rateLimiter.js";
 
 const router = Router();
 
 router.route("/").get(verifyToken, getProfile);
 router
   .route("/change-password")
-  .patch(validateBody(changePasswordVali), verifyToken, changePassword);
+  .patch(
+    validateBody(changePasswordVali),
+    verifyToken,
+    authLimiter,
+    changePassword,
+  );
 router
   .route("/update-profile")
   .patch(validateBody(updateUserVali), verifyToken, updateProfile);
 
-router.route("/delete-account").get(verifyToken, deleteAccount);
-router.route("/logout-all").patch(verifyToken , logoutAllDevices);
+router.route("/delete-account").delete(verifyToken, authLimiter, deleteAccount);
+router.route("/logout-all").patch(verifyToken, authLimiter, logoutAllDevices);
 
 export default router;
