@@ -21,6 +21,7 @@ import corsOptions from "./config/corsOptions.js";
 import imagesRoute from "./routes/imagesRoute.js";
 import userRoute from "./routes/userRoute.js";
 import { authLimiter, globalLimiter } from "./middlewares/rateLimiter.js";
+import { initCronJobs } from "./utils/cronJobs.js";
 
 export const app = express();
 const PORT = process.env.PORT || 5000;
@@ -30,6 +31,7 @@ const __dirname = path.dirname(__filename);
 connectToDb();
 app.use(helmet());
 app.use(cors(corsOptions));
+initCronJobs();
 app.use(globalLimiter);
 app.use("/payment", webhookRoute);
 app.use(express.json());
