@@ -12,8 +12,8 @@ export const forgetPass = async (req: Request, res: Response) => {
   const getUser = await User.findOne({ email }).exec();
   if (!getUser) {
     throw new AppError(
-      404,
-      "If an account with that email exist, we sent a password reset link.",
+      200,
+      "you can check your email and you can click the button to change the password",
     );
   }
   const resetToken = crypto.randomBytes(32).toString("hex");
@@ -34,28 +34,17 @@ export const forgetPass = async (req: Request, res: Response) => {
             <h2 style = "text-align : center ; margin-bottom :5px; ">Reset Token</h2>
             <p >You can click this button and then you can change your password</p>
             <a href=${resetUrl} style="margin-top : 3px ; padding :12px 20px ; background-color : #5044E5 ;
-               color : white ; text-decoration : none ; cursor: pointer ; border-radius : 4px ; border : none;"
+            color : white ; text-decoration : none ; cursor: pointer ; border-radius : 4px ; border : none;"
             >
             Click here
             </a> 
         </div>
     `,
   );
-  const user = {
-    id: getUser._id,
-    email: getUser.email,
-    first_name: getUser.first_name,
-    last_name: getUser.last_name,
-    verificationTokenExpiry: getUser.verificationTokenExpiry,
-    isVerified: getUser.isVerified,
-    avatar : getUser.avatar,
-    gender : getUser.gender,
-    phone : getUser.phone,
-  };
   res.status(200).json({
     success: true,
     message:
       "you can check your email and you can click the button to change the password",
-    data: user,
+    
   });
 };

@@ -1,4 +1,4 @@
-import { describe, beforeAll, afterAll, it, expect } from "@jest/globals";
+import { describe, beforeAll, beforeEach, afterAll, it, expect } from "@jest/globals";
 import request from "supertest";
 import { app } from "../src/server";
 import mongoose from "mongoose";
@@ -7,7 +7,8 @@ import { Doctor } from "../src/models/doctorSchema";
 import DocSlot from "../src/models/slotSchema";
 import Appointment from "../src/models/appointmentSchema";
 import { getStripeInstance } from "../src/config/stripe";
-describe("Admin API Intagration Tests", () => {
+
+describe("Admin API Integration Tests", () => {
   let userAccessToken: string;
   let adminAccessToken: string;
   let doctorID1: string;
@@ -25,11 +26,13 @@ describe("Admin API Intagration Tests", () => {
       process.env.MONGO_URI_TEST ||
       "mongodb://127.0.0.1:27017/doctor_app_test?directConnection=true&retryWrites=false";
     await mongoose.connect(testMongoUri);
+  }, 30000);
+
+  beforeEach(async () => {
     await User.deleteMany();
     await Doctor.deleteMany();
     await Appointment.deleteMany();
-
-    // you can cancel Authenticatin rate limit in the server file so you can send many requests
+    await DocSlot.deleteMany();
 
     const [createUser, createAdmin, createUserDoctor1, createUserDoctor2] =
       await Promise.all([
@@ -79,28 +82,24 @@ describe("Admin API Intagration Tests", () => {
       }),
     ]);
 
-    const [loginUserRes, loginAdminRes, loginUserDoctorRis] = await Promise.all(
-      [
-        request(app)
-          .post("/auth/login")
-          .send({ email: "usertest1@gmail.com", password: "12345678" }),
-        request(app)
-          .post("/auth/login")
-          .send({ email: "adminEmail@gmail.com", password: "12345678" }),
-        request(app)
-          .post("/auth/login")
-          .send({ email: "doctorEmail@gmail.com", password: "12345678" }),
-      ],
-    );
+    const [loginUserRes, loginAdminRes] = await Promise.all([
+      request(app)
+        .post("/auth/login")
+        .send({ email: "usertest1@gmail.com", password: "12345678" }),
+      request(app)
+        .post("/auth/login")
+        .send({ email: "adminEmail@gmail.com", password: "12345678" }),
+    ]);
 
     const createSlot = await DocSlot.create({
       doctorID: createDoctor1._id,
-      date: "2026-09-20",
+      date: "2026-10-16",
       startTime: "11:00",
       endTime: "12:00",
       isBooked: true,
       price: 50,
     });
+
     const stripe = getStripeInstance();
     const payment_intent = await stripe.paymentIntents.create({
       amount: 5000,
@@ -109,6 +108,7 @@ describe("Admin API Intagration Tests", () => {
       currency: "usd",
       confirm: true,
     });
+
     const createAppointment = await Appointment.create({
       patientID: createUser.body.user.id,
       doctorID: createDoctor1._id,
@@ -116,12 +116,12 @@ describe("Admin API Intagration Tests", () => {
       payment: true,
       paymentStatus: "paid",
       paymentIntentId: payment_intent.id,
-      //   status: "cancelled",
-      // status : "completed",
       status: "confirmed",
     });
+
     userAccessToken = `Bearer ${loginUserRes.body.accessToken}`;
     adminAccessToken = `Bearer ${loginAdminRes.body.accessToken}`;
+    
     doctorID1 = createDoctor1._id.toString();
     doctorID2 = createDoctor2._id.toString();
     appointmentID = createAppointment._id.toString();
@@ -134,423 +134,358 @@ describe("Admin API Intagration Tests", () => {
     await mongoose.connection.close();
   });
 
-  it("should return 403 if a user try to get an admin path", async () => {
-    const res = await request(app)
-      .get("/admin/all-patients")
-      .set("Authorization", userAccessToken);
+  // --- 1. Authorization & Doctor Requests ---
+  describe("Admin Authorization & Doctor Requests", () => {
+    it("should return 403 if a user tries to get an admin path", async () => {
+      const res = await request(app)
+        .get("/admin/all-patients")
+        .set("Authorization", userAccessToken);
 
-    console.log("res.body", res.body);
-    expect(res.status).toBe(403);
-    expect(res.body.message).toBe("Access denied!");
+      expect(res.status).toBe(403);
+      expect(res.body.message).toBe("Access denied!");
+    });
+
+    it("should return 200 even if there are no requests", async () => {
+      const res = await request(app)
+        .get("/admin/doctor-requests")
+        .set("Authorization", adminAccessToken);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("should return all requests in db and also using search query", async () => {
+      const docReq =  await request(app).post("/doctors/app-as-doctor").send({
+          consultationFee: 50,
+          specialty: "testSpecialty",
+          address: "testAddress",
+          phone: "1234567890",
+      }).set("Authorization" , userAccessToken);
+      const res = await request(app)
+        .get("/admin/doctor-requests?search=user1")
+        .set("Authorization", adminAccessToken);
+      expect(res.status).toBe(200);
+      expect(res.body.data[0].userID.first_name).toBe("user1");
+    });
+
+    it("should return 400 if doctor id is invalid when updating status", async () => {
+      const res = await request(app)
+        .patch("/admin/doctor-requests/6aac9a882f4609aabc9be45z/status")
+        .set("Authorization", adminAccessToken)
+        .send({ status: "approved" });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 if status is not approved or rejected", async () => {
+      const res = await request(app)
+        .patch(`/admin/doctor-requests/${doctorID1}/status`)
+        .set("Authorization", adminAccessToken)
+        .send({ status: "testStatus" });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 404 if doctor profile not found", async () => {
+      const res = await request(app)
+        .patch(`/admin/doctor-requests/6aac9a882f4609aabc9be45a/status`)
+        .set("Authorization", adminAccessToken)
+        .send({ status: "approved" });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should return 200 if doctor has been accepted and update role to doctor", async () => {
+      const res = await request(app)
+        .patch(`/admin/doctor-requests/${doctorID1}/status`)
+        .set("Authorization", adminAccessToken)
+        .send({ status: "approved" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.userID.role).toBe("doctor");
+    });
+
+    it("should return 200 if doctor has been rejected and delete profile", async () => {
+      const res = await request(app)
+        .patch(`/admin/doctor-requests/${doctorID1}/status`)
+        .set("Authorization", adminAccessToken)
+        .send({ status: "rejected" });
+
+      const getDoc = await Doctor.findById(doctorID1).lean();
+
+      expect(res.status).toBe(200);
+      expect(getDoc).toBeNull();
+    });
   });
 
-  it("should return 200 even if threr is no requests", async () => {
-    const res = await request(app)
-      .get("/admin/doctor-requests")
-      .set("Authorization", adminAccessToken);
+  // --- 2. Admin Get Lists (Patients, Doctors, Appointments) ---
+  describe("Admin Listings (Patients, Doctors, Appointments)", () => {
+    it("should return 200 and all patients with search query", async () => {
+      const res = await request(app)
+        .get("/admin/all-patients?search=")
+        .set("Authorization", adminAccessToken);
 
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
+      expect(res.status).toBe(200);
+    });
+
+    it("should return 200 and all doctors in db with search query", async () => {
+      const res = await request(app)
+        .get("/admin/all-doctors?search=specialtytest2")
+        .set("Authorization", adminAccessToken);
+
+      expect(res.status).toBe(200);
+    });
+
+    it("should return all appointments in db and use search query", async () => {
+      const res = await request(app)
+        .get("/admin/all-appointments?search=2026-10-16")
+        .set("Authorization", adminAccessToken);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data[0].slotID.date).toBe("2026-10-16");
+    });
   });
 
-  it("should return all requests in db and also using search query", async () => {
-    const res = await request(app)
-      .get("/admin/doctor-requests?search=doctor2")
-      .set("Authorization", adminAccessToken);
+  // --- 3. Admin Appointment Cancellation ---
+  describe("Admin Cancel Appointment", () => {
+    it("should return 400 if appointment id is not valid", async () => {
+      const res = await request(app)
+        .patch(`/admin/cancel-appointment/6aacb14fc26a4b35a9930b7z`)
+        .set("Authorization", adminAccessToken);
 
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
-    expect(res.body.data[0].userID.first_name).toBe("doctor2");
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 404 if appointment not found", async () => {
+      const res = await request(app)
+        .patch(`/admin/cancel-appointment/6aacb14fc26a4b35a9930b7a`)
+        .set("Authorization", adminAccessToken);
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should return 200 if appointment cancelled successfully and refund payment", async () => {
+      const res = await request(app)
+        .patch(`/admin/cancel-appointment/${appointmentID}`)
+        .set("Authorization", adminAccessToken);
+
+      const [getSlot, getAppointment] = await Promise.all([
+        DocSlot.findById(slotID).lean(),
+        Appointment.findById(appointmentID).lean(),
+      ]);
+
+      expect(res.status).toBe(200);
+      expect(getSlot?.isBooked).toBe(false);
+      expect(getAppointment?.status).toBe("cancelled");
+      expect(getAppointment?.paymentIntentId).toBeNull();
+    });
+
+    it("should return 400 if appointment has already been cancelled", async () => {
+      // إلغاء الموعد أولاً
+      await Appointment.findByIdAndUpdate(appointmentID, { status: "cancelled" });
+
+      const res = await request(app)
+        .patch(`/admin/cancel-appointment/${appointmentID}`)
+        .set("Authorization", adminAccessToken);
+
+      expect(res.status).toBe(400);
+    });
   });
 
-  it("should return 400 if doctor id is invalid", async () => {
-    const res = await request(app)
-      .patch("/admin/doctor-requests/6aac9a882f4609aabc9be45z/status")
-      .set("Authorization", adminAccessToken)
-      .send({ status: "approved" });
+  // --- 4. Admin User Role Management ---
+  describe("Admin User Role Management", () => {
+    it("should return 400 if new role is invalid", async () => {
+      const res = await request(app)
+        .patch(`/admin/update-role/6aacc0b3c42af7c659850f70`)
+        .set("Authorization", adminAccessToken)
+        .send({ newRole: "testRole" });
 
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 if user id is not valid", async () => {
+      const res = await request(app)
+        .patch("/admin/update-role/6aacc0b3c42af7c659850f7z")
+        .set("Authorization", adminAccessToken)
+        .send({ newRole: "admin" });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 404 if account not found", async () => {
+      const res = await request(app)
+        .patch("/admin/update-role/6aacc0b3c42af7c659850f7a")
+        .set("Authorization", adminAccessToken)
+        .send({ newRole: "admin" });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should return 200 if role updated successfully", async () => {
+      const res = await request(app)
+        .patch(`/admin/update-role/${userID}`)
+        .set("Authorization", adminAccessToken)
+        .send({ newRole: "admin" });
+
+      const getUser = await User.findById(userID).lean();
+
+      expect(res.status).toBe(200);
+      expect(getUser?.role).toBe("admin");
+    });
   });
 
-  it("should return 400 if status is not approved or rejected", async () => {
-    const res = await request(app)
-      .patch(`/admin/doctor-requests/${doctorID1}/status`)
-      .set("Authorization", adminAccessToken)
-      .send({ status: "testStatus" });
+  // --- 5. Admin Block User & Account Deletion ---
+  describe("Admin Block User & Account Deletion", () => {
+    it("should return 400 if user id is invalid for blocking", async () => {
+      const res = await request(app)
+        .patch("/admin/block-user/6aacc0b3c42af7c659850f7z")
+        .set("Authorization", adminAccessToken)
+        .send({ isBlocked: true });
 
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
+      expect(res.status).toBe(400);
+    });
 
-  it("should return 404 if doctor profile not found", async () => {
-    const res = await request(app)
-      .patch(`/admin/doctor-requests/6aac9a882f4609aabc9be45a/status`)
-      .set("Authorization", adminAccessToken)
-      .send({ status: "approved" });
+    it("should return 404 if account not found for blocking", async () => {
+      const res = await request(app)
+        .patch("/admin/block-user/6aacc0b3c42af7c659850f7a")
+        .set("Authorization", adminAccessToken)
+        .send({ isBlocked: true });
+      expect(res.status).toBe(404);
+    });
 
-    console.log("res.body", res.body);
-    expect(res.status).toBe(404);
-  });
-
-  it("should return 200 if doctor has been accepted and update his role to doctor", async () => {
-    const res = await request(app)
-      .patch(`/admin/doctor-requests/${doctorID1}/status`)
-      .set("Authorization", adminAccessToken)
-      .send({ status: "approved" });
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
-    expect(res.body.data.userID.role).toBe("doctor");
-  });
-
-  it("should return 200 if doctor has been rejected and also delete his profile as doctor ", async () => {
-    const res = await request(app)
-      .patch(`/admin/doctor-requests/${doctorID1}/status`)
-      .set("Authorization", adminAccessToken)
-      .send({ status: "rejected" });
-
-    const getDoc = await Doctor.findById(doctorID1).lean();
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
-    expect(getDoc).toBeNull();
-  });
-
-  it("should return 200 and all patients and we can use search query", async () => {
-    const res = await request(app)
-      .get("/admin/all-patients?search=")
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
-  });
-
-  it("should return 200 all doctors in db and we can use search query", async () => {
-    const res = await request(app)
-      .get("/admin/all-doctors?search=specialtytest2")
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
-  });
-
-  it("should return all appointments in db and we can use search query", async () => {
-    const res = await request(app)
-      .get("/admin/all-appointments?search=2026-09-20")
-      .set("Authorization", adminAccessToken);
-
-    console.log(res.body);
-    expect(res.status).toBe(200);
-    expect(res.body.data[0].slotID.date).toBe("2026-09-20");
-  });
-
-  it("should return 400 if appointmetn id is not valid", async () => {
-    const res = await request(app)
-      .patch(`/admin/cancel-appointment/6aacb14fc26a4b35a9930b7z`)
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 404 if appointment not found", async () => {
-    const res = await request(app)
-      .patch(`/admin/cancel-appointment/6aacb14fc26a4b35a9930b7a`)
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(404);
-  });
-
-  it("should return 400 if this appointment has aleardy cancelled", async () => {
-    const res = await request(app)
-      .patch(`/admin/cancel-appointment/${appointmentID}`)
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 400 if this appointment has aleardy completed", async () => {
-    const res = await request(app)
-      .patch(`/admin/cancel-appointment/${appointmentID}`)
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 200 if the appointment has cancelled successfully and return payment mony to the patient if this appointment has paid", async () => {
-    const res = await request(app)
-      .patch(`/admin/cancel-appointment/${appointmentID}`)
-      .set("Authorization", adminAccessToken);
-
-    const [getSlot, getAppointment] = await Promise.all([
-      DocSlot.findById(slotID).lean(),
-      Appointment.findById(appointmentID).lean(),
-    ]);
-    console.log("appointment", getAppointment);
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
-    expect(getSlot?.isBooked).toBe(false);
-    expect(getAppointment?.status).toBe("cancelled");
-    expect(getAppointment?.paymentIntentId).toBe(null);
-  });
-
-  it("should return 400 if new role is not user | doctor | admin", async () => {
-    const res = await request(app)
-      .patch(`/admin/update-role/6aacc0b3c42af7c659850f70`)
-      .set("Authorization", adminAccessToken)
-      .send({ newRole: "testRole" });
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 400 if user id is not valid ", async () => {
-    const res = await request(app)
-      .patch("/admin/update-role/6aacc0b3c42af7c659850f7z")
-      .set("Authorization", adminAccessToken)
-      .send({ newRole: "admin" });
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 404 if this account not found", async () => {
-    const res = await request(app)
-      .patch("/admin/update-role/6aacc0b3c42af7c659850f7a")
-      .set("Authorization", adminAccessToken)
-      .send({ newRole: "admin" });
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(404);
-  });
-
-  it("should return 200 if role updated successfully", async () => {
-    const res = await request(app)
-      .patch(`/admin/update-role/${userID}`)
-      .set("Authorization", adminAccessToken)
-      .send({ newRole: "admin" });
-
-    const getUser = await User.findById(userID).lean();
-
-    console.log("user:", getUser);
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
-    expect(getUser?.role).toBe("admin");
-  });
-
-  it("should return 400 if user id is invalid", async () => {
-    const res = await request(app)
-      .patch("/admin/block-user/6aacc0b3c42af7c659850f7z")
-      .set("Authorization", adminAccessToken)
-      .send({ isBlocked: true });
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 404 if this account not found", async () => {
-    const res = await request(app)
-      .patch("/admin/block-user/6aacc0b3c42af7c659850f7a")
-      .set("Authorization", adminAccessToken)
-      .send({ isBlocked: true });
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(404);
-  });
-  it("should return 400 if isBlocked feld is not a boolean ", async () => {
-    const res = await request(app)
-      .patch("/admin/block-user/6aacc0b3c42af7c659850f7a")
-      .set("Authorization", adminAccessToken)
-      .send({ isBlocked: "test" });
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  // run the test in line 329 so we have changed the role of the user.
-
-  it("should return 403 if an admin try to block an another admin", async () => {
-    const res = await request(app)
-      .patch(`/admin/block-user/${userID}`)
-      .set("Authorization", adminAccessToken)
-      .send({ isBlocked: true });
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(403);
-  });
-
-  it("should return 200 if the account has blocked", async () => {
-    const [res, getUser] = await Promise.all([
-      request(app)
+    it("should return 400 if isBlocked field is not a boolean", async () => {
+      const res = await request(app)
         .patch(`/admin/block-user/${userID}`)
         .set("Authorization", adminAccessToken)
-        .send({ isBlocked: true }),
-      User.findById(userID).lean(),
-    ]);
+        .send({ isBlocked: "test" });
 
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
-    expect(res.body.data.isBlocked).toBe(true);
-    expect(res.body.data.tokenVersion).toBeGreaterThan(
-      getUser?.tokenVersion as number,
-    );
-  });
-
-  it("should return 400 if user id is invalid", async () => {
-    const res = await request(app)
-      .delete("/admin/delete-account/6aacc0b3c42af7c659850f7z")
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 404 if this account not found", async () => {
-    const res = await request(app)
-      .delete(`/admin/delete-account/6aa9d8cf51da0972b69ead89`)
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(404);
-  });
-
-  // run test in the line 329 so we got two admins
-
-  it("should return 403 if admin try to delete an admin account or himself ", async () => {
-    const res = await request(app)
-      .delete(`/admin/delete-account/${userID}`)
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(403);
-  });
-
-  it("should return 200 if the account has been deleted successfully ", async () => {
-    const res = await request(app)
-      .delete(`/admin/delete-account/${userID}`)
-      .set("Authorization", adminAccessToken);
-    const getUser = await User.findById(userID).lean();
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
-    expect(getUser).toBeNull();
-  });
-
-  it("should return 200 a doctor account delete from Doctor schema and User schema ", async () => {
-    const res = await request(app)
-      .delete(`/admin/delete-account/${doctorUserID1}`)
-      .set("Authorization", adminAccessToken);
-
-    const [getUser, getDocUserAccount] = await Promise.all([
-      User.findById(doctorUserID1).lean(),
-      Doctor.findOne({ userID: doctorUserID1 }),
-    ]);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
-    expect(getUser).toBeNull();
-    expect(getDocUserAccount).toBeNull();
-  });
-
-  it("should return 400 if slot id is missing or is invalid", async () => {
-    const res = await request(app)
-      .delete("/admin/delete-slot/6aa9d8cf51da0972b69ead8s")
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 404 if slot not found", async () => {
-    const res = await request(app)
-      .delete("/admin/delete-slot/6aa9d8cf51da0972b69ead89")
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(404);
-  });
-
-  it("should return 400 if slot has been booked ", async () => {
-    const res = await request(app)
-      .delete(`/admin/delete-slot/${slotID}`)
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  // change isBooked to false in createSlot
-
-  it("should return 204 if has been deleted successfully ", async () => {
-    const res = await request(app)
-      .delete(`/admin/delete-slot/${slotID}`)
-      .set("Authorization", adminAccessToken);
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(204);
-  });
-
-  it("should return 400 if slotIDs is not an array or equal 0", async () => {
-    const res = await request(app)
-      .delete("/admin/delete-many-slots")
-      .set("Authorization", adminAccessToken)
-      .send({ slotIDs: "test" });
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 400 if one slot id is invalid", async () => {
-    const res = await request(app)
-      .delete("/admin/delete-many-slots")
-      .set("Authorization", adminAccessToken)
-      .send({ slotIDs: ["6aa9d8cf51da0972b69ead8z"] });
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 400 if slot id is not equal 24 letter from ", async () => {
-    const res = await request(app)
-      .delete("/admin/delete-many-slots")
-      .set("Authorization", adminAccessToken)
-      .send({ slotIDs: ["6aa9d8cf51da0972b69ead8"] });
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-  });
-
-  it("should return 400 if slot has been booked and deleteaccount equal 0", async () => {
-    const res = await request(app)
-      .delete("/admin/delete-many-slots")
-      .set("Authorization", adminAccessToken)
-      .send({ slotIDs: [`${slotID}`] });
-
-    console.log("res.body", res.body);
-    expect(res.status).toBe(400);
-    expect(res.body.message).toBe(
-      "No eligible unbooked slots were found to delete or you are not authorized to delete them.",
-    );
-  });
-
-  it("should return 200 if the slots has been deleted successfully and just available slots", async () => {
-    const createSlot = await DocSlot.create({
-      doctorID: doctorID1,
-      date: "2026-09020",
-      startTime: "15:00",
-      endTime: "16:00",
-      isBooked: false,
-      price: 50,
+      expect(res.status).toBe(400);
     });
-    const slotID2 = createSlot._id.toString();
-    const res = await request(app)
-      .delete("/admin/delete-many-slots")
-      .set("Authorization", adminAccessToken)
-      .send({ slotIDs: [`${slotID}`, `${slotID2}`] });
 
-    console.log("res.body", res.body);
-    expect(res.status).toBe(200);
+    it("should return 403 if admin tries to block another admin", async () => {
+      await User.findByIdAndUpdate(userID, { role: "admin" });
+
+      const res = await request(app)
+        .patch(`/admin/block-user/${userID}`)
+        .set("Authorization", adminAccessToken)
+        .send({ isBlocked: true });
+
+      expect(res.status).toBe(403);
+    });
+
+    it("should return 200 if the account has been blocked successfully", async () => {
+      const [res, getUser] = await Promise.all([
+        request(app)
+          .patch(`/admin/block-user/${userID}`)
+          .set("Authorization", adminAccessToken)
+          .send({ isBlocked: true }),
+        User.findById(userID).lean(),
+      ]);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.isBlocked).toBe(true);
+      expect(res.body.data.tokenVersion).toBeGreaterThan(
+        getUser?.tokenVersion as number,
+      );
+    });
+
+    it("should return 200 if account has been deleted successfully", async () => {
+      const res = await request(app)
+        .delete(`/admin/delete-account/${userID}`)
+        .set("Authorization", adminAccessToken);
+      const getUser = await User.findById(userID).lean();
+
+      expect(res.status).toBe(200);
+      expect(getUser).toBeNull();
+    });
+
+    it("should return 200 if doctor account is deleted from Doctor and User schema", async () => {
+      const res = await request(app)
+        .delete(`/admin/delete-account/${doctorUserID1}`)
+        .set("Authorization", adminAccessToken);
+
+      const [getUser, getDocUserAccount] = await Promise.all([
+        User.findById(doctorUserID1).lean(),
+        Doctor.findOne({ userID: doctorUserID1 }),
+      ]);
+
+      expect(res.status).toBe(200);
+      expect(getUser).toBeNull();
+      expect(getDocUserAccount).toBeNull();
+    });
+  });
+
+  // --- 6. Admin Slot Management ---
+  describe("Admin Slot Management", () => {
+    it("should return 400 if slot id is invalid", async () => {
+      const res = await request(app)
+        .delete("/admin/delete-slot/6aa9d8cf51da0972b69ead8s")
+        .set("Authorization", adminAccessToken);
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 404 if slot not found", async () => {
+      const res = await request(app)
+        .delete("/admin/delete-slot/6aa9d8cf51da0972b69ead89")
+        .set("Authorization", adminAccessToken);
+
+      expect(res.status).toBe(404);
+    });
+
+    it("should return 400 if slot has been booked when trying to delete", async () => {
+      const res = await request(app)
+        .delete(`/admin/delete-slot/${slotID}`)
+        .set("Authorization", adminAccessToken);
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 204 if available slot has been deleted successfully", async () => {
+      await DocSlot.findByIdAndUpdate(slotID, { isBooked: false });
+
+      const res = await request(app)
+        .delete(`/admin/delete-slot/${slotID}`)
+        .set("Authorization", adminAccessToken);
+
+      expect(res.status).toBe(204);
+    });
+
+    it("should return 400 if slotIDs is not an array or equals 0", async () => {
+      const res = await request(app)
+        .delete("/admin/delete-many-slots")
+        .set("Authorization", adminAccessToken)
+        .send({ slotIDs: "test" });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 if one slot id in delete-many is invalid", async () => {
+      const res = await request(app)
+        .delete("/admin/delete-many-slots")
+        .set("Authorization", adminAccessToken)
+        .send({ slotIDs: ["6aa9d8cf51da0972b69ead8z"] });
+
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 200 if multiple available slots are deleted successfully", async () => {
+      await DocSlot.findByIdAndUpdate(slotID, { isBooked: false });
+      const createSlot2 = await DocSlot.create({
+        doctorID: doctorID1,
+        date: "2026-09-20",
+        startTime: "15:00",
+        endTime: "16:00",
+        isBooked: false,
+        price: 50,
+      });
+      const slotID2 = createSlot2._id.toString();
+
+      const res = await request(app)
+        .delete("/admin/delete-many-slots")
+        .set("Authorization", adminAccessToken)
+        .send({ slotIDs: [slotID, slotID2] });
+
+      expect(res.status).toBe(200);
+    });
   });
 });
