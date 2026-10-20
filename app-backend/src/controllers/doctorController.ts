@@ -9,8 +9,62 @@ import DocSlot from "../models/slotSchema.js";
 import Appointment from "../models/appointmentSchema.js";
 import { Types } from "mongoose";
 import User from "../models/userSchema.js";
-import { populate } from "dotenv";
 
+/**
+ * @swagger
+ * /doctors/app-as-doctor:
+ *   post:
+ *     summary: Send a request to be a doctor
+ *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - address
+ *               - consultationFee
+ *               - specialty
+ *               - phone
+ *             properties:
+ *               address:
+ *                 type: string
+ *                 example: "address_example"
+ *               consultationFee:
+ *                 type: number
+ *                 example: 50
+ *               specialty:
+ *                 type: string
+ *                 example: "specialty_example"
+ *               phone:
+ *                 type: string
+ *                 example: "1234567890"
+ *     responses:
+ *       201:
+ *         description: "Request has been successfully submitted"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Your application has been successfully submitted, and is under review."
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: If any field was not acceptable or if this user has already sent a request
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin
+ */
 export const applyAsDoctor = async (req: Request, res: Response) => {
   const { error, value } = applyAsDoctorVali.validate(req.body);
   if (error) {
@@ -51,6 +105,70 @@ export const applyAsDoctor = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /doctors/add-slots:
+ *   post:
+ *     summary: Adding slots in the app (Doctors only)
+ *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - date
+ *               - startTime
+ *               - endTime
+ *               - price
+ *               - excludedSlots
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 example: "2026-10-10"
+ *               startTime:
+ *                 type: string
+ *                 example: "09:00"
+ *               endTime:
+ *                 type: string
+ *                 example: "16:00"
+ *               price:
+ *                 type: number
+ *                 example: 50
+ *               excludedSlots:
+ *                 type: array
+ *                 example: "12:00"
+ *     responses:
+ *       201:
+ *         description: "means that Slots created Successfully."
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Slots created Successfully."
+ *                 slotLength:
+ *                   type: number
+ *                   example: 7
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: If any field is missing or if the doc try to create slot in past date or if the start time higher than end time
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not a doctor
+ */
 export const addDoctorSlots = async (req: Request, res: Response) => {
   const { error } = addDoctorSlotsVali.validate(req.body);
   if (error) {
@@ -62,11 +180,11 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
   const { date, startTime, endTime, price, excludedSlots } = req.body;
   const doctorID = req.user?.id;
   if (!doctorID) {
-    throw new AppError(400, "You are unauthenticated.");
+    throw new AppError(401, "You are unauthenticated.");
   }
   const findDoc = await Doctor.findOne({ userID: doctorID });
   if (!findDoc) {
-    throw new AppError(400, "Doctor Profile not found.");
+    throw new AppError(404, "Doctor Profile not found.");
   }
   const currentDate = new Date(date);
   const today = new Date();
@@ -116,6 +234,68 @@ export const addDoctorSlots = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /doctors/all-doctors:
+ *   get:
+ *     summary: Get all doctors with pagination and search
+ *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *         description: Number of limit per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           example: "doctor_name"
+ *         description: Search by doctor name, email, or specialty
+ *     responses:
+ *       200:
+ *         description: All doctors that retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "All doctors"
+ *                 results:
+ *                   type: integer
+ *                   example: 1
+ *                 total:
+ *                   type: integer
+ *                   example: 1
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 1
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Access token invaled.
+ */
 export const allDoctors = async (req: Request, res: Response) => {
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
   const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
@@ -155,6 +335,79 @@ export const allDoctors = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /doctors/available-slots/{doctorId}:
+ *   get:
+ *     summary: Get all available slots for one doctor with pagination and search query
+ *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: doctorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "6aa9d8cf51da0972b69ead8a"
+ *         description: Doctor id to get his slots
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *         description: Number of limit per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           example: "2026-10-10"
+ *         description: Search for a slot by date
+ *     responses:
+ *       200:
+ *         description: Available slots retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Available slots"
+ *                 results:
+ *                   type: integer
+ *                   example: 1
+ *                 total:
+ *                   type: integer
+ *                   example: 1
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 1
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: If doctor id in params is invalid.
+ *       401:
+ *         description: Unauthenticated, token missing or invalid.
+ *       403:
+ *         description: Access token invalid.
+ *       404:
+ *         description: Doctor Profile not found.
+ */
 export const getAvailableSlots = async (req: Request, res: Response) => {
   const doctorID = (req.params.doctorId as string).trim();
   if (!doctorID || !Types.ObjectId.isValid(doctorID)) {
@@ -212,6 +465,35 @@ export const getAvailableSlots = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /doctors/delete-slot/{slotID}":
+ *   delete:
+ *     summary: Delete one slot (Doctors only)
+ *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: slotID
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "6aa9d8cf51da0972b69ead8a"
+ *         description: Slot id to find in db
+ *     responses:
+ *       204:
+ *         description: Slot has been deleted successfully
+ *       400:
+ *         description: If this slot already booked or if the slot id is invalid
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin or if doctor try to delete another doctor's slot
+ *       404:
+ *         description: If the slot not found
+ *
+ */
 export const deleteDoctorSlot = async (req: Request, res: Response) => {
   const slotID = req.params.slotID as string;
   if (!slotID || !Types.ObjectId.isValid(slotID)) {
@@ -236,6 +518,49 @@ export const deleteDoctorSlot = async (req: Request, res: Response) => {
   res.status(204).send();
 };
 
+/**
+ * @swagger
+ * /doctors/delete-many-slots:
+ *   delete:
+ *     summary: Delete many slots in the same time (Doctors only)
+ *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - slotIDs
+ *             properties:
+ *               slotIDs:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   example: "'6aa9d8cf51da0972b69ead8a' , '6aa9d8cf51da0972b69ead8b'"
+ *     responses:
+ *       200:
+ *         description: Slots has been deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "{Number of slots} slots deleted successfully"
+ *       400:
+ *         description: If {slotIDs} wasn't an array , if an id is invalid or if the slots are already booked and also id SlotIDs was empty
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not a doctor
+ */
 export const deleteManyDoctorSlots = async (req: Request, res: Response) => {
   const { slotIDs } = req.body;
   if (!Array.isArray(slotIDs) || slotIDs.length === 0) {
@@ -269,6 +594,68 @@ export const deleteManyDoctorSlots = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /doctors/appointments/my-appointments:
+ *   get:
+ *     summary: Get all doctor's appointments with pagination and search (Doctors only)
+ *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *         description: Number of limit per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           example: "2026-10-10"
+ *         description: Search by appointment date, patient name or patient email
+ *     responses:
+ *       200:
+ *         description: All appointments that retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "Your appointments"
+ *                 results:
+ *                   type: integer
+ *                   example: 1
+ *                 total:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 1
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not a doctor
+ */
 export const getDoctorAppointments = async (req: Request, res: Response) => {
   const userID = req.user?.id;
   if (!userID) {
@@ -337,6 +724,58 @@ export const getDoctorAppointments = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /doctors/appointments/{appointmentID}/status:
+ *   patch:
+ *     summary: Update the status of an appointment (Doctors only)
+ *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: appointmentID
+ *         schema:
+ *           type: string
+ *           example: 6aa9d8cf51da0972b69ead8a
+ *         description: appointment id to get this appointment
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 example: "'confirmed' or 'rejected' or 'completed'"
+ *     responses:
+ *       200:
+ *         description: "means that this appointment status has been changed and if it rejected then the slot will be availabel"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "The status has been changed successfully"
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: If the status wasn't confirmed or rejected or completed and if the appointment id was invalid or if this appointment was already cancelled or rejected or completed
+ *       401:
+ *         description:  Unauthenticated, token missing or invalid
+ *       404:
+ *         description: If doctor profile or appointment not found
+ *       403:
+ *         description: Forbidden, user is not a doctor or if this appointment wan't for this doctor
+ */
 export const updateAppointmentStatus = async (req: Request, res: Response) => {
   const appointmentID = req.params.appointmentID as string;
   if (!appointmentID || !Types.ObjectId.isValid(appointmentID)) {
@@ -394,6 +833,37 @@ export const updateAppointmentStatus = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /doctors/get-profile/{doctorID}:
+ *   get:
+ *     summary: Get profile of the doctor
+ *     tags: [Doctor]
+ *     parameters:
+ *       - in: path
+ *         name: doctorID
+ *         schema:
+ *           type: string
+ *           example: 6aa9d8cf51da0972b69ead8a
+ *         description: doctor id to get this doctor
+ *     responses:
+ *       200:
+ *         description: "means that this doctor is exist"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: If doctor id was invalid
+ *       404:
+ *         description: If doctor profile not found
+ */
 export const getDoctorProfile = async (req: Request, res: Response) => {
   const doctorID = req.params.doctorID as string;
   if (!doctorID || !Types.ObjectId.isValid(doctorID)) {
@@ -411,6 +881,84 @@ export const getDoctorProfile = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /doctors/update-profile/{doctorID}:
+ *   patch:
+ *     summary: Update profile of the doctor (Doctors only)
+ *     tags: [Doctor]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: doctorID
+ *         schema:
+ *           type: string
+ *           example: 6aa9d8cf51da0972b69ead8a
+ *         description: doctor id to get this doctor
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - consultationFee
+ *               - specialty
+ *               - address
+ *               - phone
+ *               - isAcceptingAppointments
+ *               - bio
+ *               - email
+ *               - doctorPhone
+ *             properties:
+ *               consultationFee:
+ *                 type: number
+ *                 example: 100
+ *               specialty:
+ *                 type: string
+ *                 example: "update_specialty"
+ *               address:
+ *                 type: string
+ *                 example: "update_address"
+ *               phone:
+ *                 type: string
+ *                 example: "1234567890"
+ *               isAcceptingAppointments:
+ *                 type: boolean
+ *                 example: string
+ *               bio:
+ *                 type: string
+ *                 example: "boi_example"
+ *               email:
+ *                 type: string
+ *                 example: "update_email"
+ *               doctorPhone:
+ *                 type: string
+ *                 example: "1234567890"
+ *     responses:
+ *       200:
+ *         description: "means that updating was successful"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "Doctor profile updated successfully"
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: if doctor id was invalid, if doctor try to update his rate or role... or if he doesn't update anything
+ *       401:
+ *         description:  Unauthenticated, token missing
+ *       403:
+ *         description: Forbidden, token is invalid, user is not a doctor or if this doctor try to update another doctor's profile
+ */
 export const updateDoctorProfile = async (req: Request, res: Response) => {
   const doctorID = req.params.doctorID as string;
   if (!doctorID || !Types.ObjectId.isValid(doctorID)) {

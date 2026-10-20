@@ -18,7 +18,7 @@ export const authLimiter = rateLimit({
   message: {
     status: 429,
     message:
-      "Too many login/register attempts, please try again after 15 minutes.",
+      "Too many requests attempts, please try again after 15 minutes.",
   },
   standardHeaders: true,
   legacyHeaders: false,

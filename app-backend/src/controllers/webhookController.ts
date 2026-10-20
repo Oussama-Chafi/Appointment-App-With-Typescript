@@ -4,6 +4,36 @@ import { AppError } from "../utils/AppError.js";
 import Appointment from "../models/appointmentSchema.js";
 import DocSlot from "../models/slotSchema.js";
 
+/**
+ * @swagger
+ * /payment/webhook:
+ *   post:
+ *     summary: Handle incoming Stripe webhook events
+ *     tags: [Payment]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: Raw Stripe event payload
+ *     responses:
+ *       200:
+ *         description: Webhook processed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 recieved:
+ *                   type: boolean
+ *                   example: true
+ *       400:
+ *         description: Missing webhook secret key, signature header, or signature verification failed
+ */
 export const handleStripeWebhook = async (req: Request, res: Response) => {
   const stripe = getStripeInstance();
   const sig = req.headers["stripe-signature"];

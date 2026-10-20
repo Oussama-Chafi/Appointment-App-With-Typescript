@@ -4,8 +4,40 @@ import User from "../models/userSchema.js";
 import crypto from "crypto";
 import sendEmail from "../utils/SendEmail.js";
 
+/**
+ * @swagger
+ * /auth/forget-password:
+ *   post:
+ *     summary: Get reset token to reset the password
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: "email@example.com"
+ *     responses:
+ *       200:
+ *         description: even if this email wan't exist in db for security
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 messsage:
+ *                   type: string
+ *                   example: "you can check your email and you can click the button to change the password"
+ *       429:
+ *         description: If the user send mor than five requests (rate limit)
+ */
 export const forgetPass = async (req: Request, res: Response) => {
-  const email= req.body.email as string;
+  const email = req.body.email as string;
   if (!email) {
     throw new AppError(400, "Email address is required.");
   }
@@ -42,9 +74,7 @@ export const forgetPass = async (req: Request, res: Response) => {
     `,
   );
   res.status(200).json({
-    success: true,
     message:
       "you can check your email and you can click the button to change the password",
-    
   });
 };

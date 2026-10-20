@@ -7,6 +7,68 @@ import DocSlot from "../models/slotSchema.js";
 import { getStripeInstance } from "../config/stripe.js";
 import mongoose, { Types } from "mongoose";
 
+/**
+ * @swagger
+ * /admin/doctor-requests:
+ *   get:
+ *     summary: Get all pending doctor requests with pagination and search (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *         description: Number of limit per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           example: "cardio"
+ *         description: Search by doctor name, email, or specialty
+ *     responses:
+ *       200:
+ *         description: Pending doctor requests retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "This is all requests in this time"
+ *                 results:
+ *                   type: integer
+ *                   example: 1
+ *                 total:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 1
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin
+ */
 export const getPendingDoctorRequest = async (req: Request, res: Response) => {
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
   const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
@@ -58,6 +120,56 @@ export const getPendingDoctorRequest = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /admin/doctor-requests/{id}/status:
+ *   patch:
+ *     summary: Update the status of this doctor to approved or rejected (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: id
+ *         schema:
+ *           type: string
+ *           example: 6aa9d8cf51da0972b69ead8a
+ *         description: id string should be an available objectId in mongoose
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 example: "'approved' or 'rejected'"
+ *     responses:
+ *       200:
+ *         description: "Doctor request has been successfully {status}, if he's approved:"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "Doctor request has been successfully approved"
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: "If the status wasn't approved or rejected and also if the id wasn't available"
+ *       404:
+ *         description: "If doctor request not found "
+ *       403:
+ *         description: Forbidden, user is not an admin
+ */
 export const updateDoctorStatus = async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const { status } = req.body;
@@ -99,6 +211,65 @@ export const updateDoctorStatus = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /admin//all-patients:
+ *   get:
+ *     summary: Get all patients with pagination and search (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *         description: Number of limit per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           example: "patient_name"
+ *         description: Search by patient name or email
+ *     responses:
+ *       200:
+ *         description: All patients that retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 results:
+ *                   type: integer
+ *                   example: 1
+ *                 total:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 1
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin
+ */
 export const getAllPatients = async (req: Request, res: Response) => {
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
   const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
@@ -130,6 +301,68 @@ export const getAllPatients = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /admin/all-doctors:
+ *   get:
+ *     summary: Get all doctors with pagination and search (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *         description: Number of limit per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           example: "doctor_name"
+ *         description: Search by doctor name, email, or specialty
+ *     responses:
+ *       200:
+ *         description: All doctors that retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "All doctors"
+ *                 results:
+ *                   type: integer
+ *                   example: 1
+ *                 total:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 1
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin
+ */
 export const getAllDoctors = async (req: Request, res: Response) => {
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
   const limit = Math.max(1, parseInt(req.query.limit as string) || 10);
@@ -176,6 +409,68 @@ export const getAllDoctors = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /admin/all-appointments:
+ *   get:
+ *     summary: Get all appointments with pagination and search (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *         description: Number of limit per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           example: "2026-10-16"
+ *         description: Search by appointment date, doctor name , doctor email , patient name , or patient email
+ *     responses:
+ *       200:
+ *         description: All appointments that retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "This all appointments in the app"
+ *                 results:
+ *                   type: integer
+ *                   example: 1
+ *                 total:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 1
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin
+ */
 export const getAppointments = async (req: Request, res: Response) => {
   const page = Math.max(1, parseInt(req.query.page as string) || 1);
   const limit = Math.max(10, parseInt(req.query.limit as string) || 10);
@@ -249,6 +544,45 @@ export const getAppointments = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /admin/cancel-appointment/{appointmentId}:
+ *   patch:
+ *     summary: Cancel an appointment by ID (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: appointmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "6aa9d8cf51da0972b69ead8a"
+ *         description: Appointment id to find in db
+ *     responses:
+ *       200:
+ *         description: Appointment cancelled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "the appointment has been cancelled successfully and refunded if paid"
+ *       400:
+ *         description: Bad request (invalid ID, already cancelled, or completed)
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin
+ *       404:
+ *         description: Appointment not found
+ */
 export const cancelAppointmentByAdmin = async (req: Request, res: Response) => {
   const appointmentID = req.params.appointmentId as string;
 
@@ -317,6 +651,35 @@ export const cancelAppointmentByAdmin = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /admin/delete-slot/{slotID}":
+ *   delete:
+ *     summary: Delete one slot (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: slotID
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "6aa9d8cf51da0972b69ead8a"
+ *         description: Slot id to find in db
+ *     responses:
+ *       204:
+ *         description: Slot has been deleted successfully
+ *       400:
+ *         description: If this slot already booked or if the slot id is invalid
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin
+ *       404:
+ *         description: If the slot not found
+ *
+ */
 export const deleteOneSlotByAdmin = async (req: Request, res: Response) => {
   const slotID: string = req.params.slotID as string;
   if (!slotID || !Types.ObjectId.isValid(slotID)) {
@@ -333,6 +696,49 @@ export const deleteOneSlotByAdmin = async (req: Request, res: Response) => {
   res.status(204).send();
 };
 
+/**
+ * @swagger
+ * /admin/delete-many-slots:
+ *   delete:
+ *     summary: Delete many slots in the same time (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - slotIDs
+ *             properties:
+ *               slotIDs:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   example: "'6aa9d8cf51da0972b69ead8a' , '6aa9d8cf51da0972b69ead8b'"
+ *     responses:
+ *       200:
+ *         description: Slots has been deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "{Number of slots} slots deleted successfully"
+ *       400:
+ *         description: If {slotIDs} wasn't an array , if an id is invalid or if the slots are already booked
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin
+ */
 export const deleteManySlotsByAdmin = async (req: Request, res: Response) => {
   const slotIDs: string[] = req.body.slotIDs as string[];
   if (!Array.isArray(slotIDs) || slotIDs.length === 0) {
@@ -362,10 +768,62 @@ export const deleteManySlotsByAdmin = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /admin/update-role/{userId}:
+ *   patch:
+ *     summary: update the role of an user or a doctor(Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *           example: 6aa9d8cf51da0972b69ead8a
+ *         description: user id so we can find him in db
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - newRole
+ *             properties:
+ *               newRole:
+ *                 type: string
+ *                 example: "'admin' , 'doctor' , 'patient'"
+ *     responses:
+ *       200:
+ *         description:
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "The role has been updated successfully"
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: If the role is not admin , doctor , patient
+ *       404:
+ *         description: If the account not found with this id
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin
+ */
 export const updateRoleOfUser = async (req: Request, res: Response) => {
   const userID = req.params.userId as string;
   const { newRole } = req.body;
-  if (!newRole || !["user", "doctor", "admin"].includes(newRole)) {
+  if (!newRole || !["patient", "doctor", "admin"].includes(newRole)) {
     throw new AppError(
       400,
       "Please provide a valid role (patient, doctor, or admin)",
@@ -387,10 +845,62 @@ export const updateRoleOfUser = async (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
     message: "The role has been updated successfully",
-    updateUser,
+    data: updateUser,
   });
 };
 
+/**
+ * @swagger
+ * /admin/block-user/{userId}:
+ *   patch:
+ *     summary: Block an account or remove the block (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *           example: 6aa9d8cf51da0972b69ead8a
+ *         description: user id so we can find him in db
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - isBlocked
+ *             properties:
+ *               isBlocked:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description:
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "User has been successfully blocked"
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: If user ID wasn't invalid or if isBlocked is not a boolean value
+ *       404:
+ *         description: If the account not found with this id
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin, or if the admin try to block another admin
+ */
 export const toggleBlockUser = async (req: Request, res: Response) => {
   const userID = req.params.userId as string;
   const { isBlocked } = req.body;
@@ -419,6 +929,45 @@ export const toggleBlockUser = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /admin/delete-account/{userId}:
+ *   delete:
+ *     summary: Delete an account (Admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *           example: 6aa9d8cf51da0972b69ead8a
+ *         description: user id so we can find him in db
+ *     responses:
+ *       200:
+ *         description: Account has been deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "Account has been deleted successfully"
+ *
+ *       400:
+ *         description: If user ID wasn't invalid
+ *       404:
+ *         description: If the account not found with this id
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, user is not an admin, or if the admin try to delete another admin
+ */
 export const deleteAnAccount = async (req: Request, res: Response) => {
   const userID = req.params.userId as string;
   if (!userID || !Types.ObjectId.isValid(userID)) {

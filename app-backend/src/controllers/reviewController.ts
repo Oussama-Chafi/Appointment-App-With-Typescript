@@ -6,6 +6,66 @@ import Appointment from "../models/appointmentSchema.js";
 import { Doctor } from "../models/doctorSchema.js";
 import Review from "../models/ReviewSchema.js";
 
+/**
+ * @swagger
+ * /reviews/doctor/{doctorID}/appointment/{appointmentID}:
+ *   post:
+ *     summary: Rate your appointment after his completed
+ *     tags: [Review]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: doctorID
+ *         schema:
+ *           type: string
+ *           example: 6aa9d8cf51da0972b69ead8a
+ *         description: so we can get the doctor
+ *       - in: path
+ *         name: appointmentID
+ *         schema:
+ *           type: string
+ *           example: 6aa9d8cf51da0972b69ead8e
+ *         description: so we can find the appointment
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - rate
+ *               - comment
+ *             properties:
+ *               rate:
+ *                 type: number
+ *                 example: 3
+ *               comment:
+ *                 type: string
+ *                 example: "comment_example"
+ *     responses:
+ *       201:
+ *         description: Review has been created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "Review has been created successfully"
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: If one field is missing, if doctorID or appointmentID is missing, if this appointment has already reviewed or if the appointment is not completed
+ *       401:
+ *         description: Unauthenticated
+ *       403:
+ *         description: Forbidden, if this appointment for another patient, if the doctor was not assigned for this appointment
+ */
 export const createReview = async (req: Request, res: Response) => {
   const { error } = rateValidation.validate(req.body);
 

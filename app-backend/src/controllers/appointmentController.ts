@@ -8,6 +8,44 @@ import { getStripeInstance } from "../config/stripe.js";
 import { generateStripeSession } from "../utils/stripeService.js";
 import mongoose, { Types } from "mongoose";
 
+/**
+ * @swagger
+ * /appointment/book/{slotID}:
+ *   post:
+ *     summary: Book an appointment
+ *     tags: [Appointments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: slotID
+ *         schema:
+ *           type: string
+ *           example: 6aa9d8cf51da0972b69ead8a
+ *         description: Slot id so we can find the slot
+ *     responses:
+ *       201:
+ *         description: means that appointment created successsfully with also link for payment
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "Appointment created successsfully"
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: If slot id wan't valid or if something happens when we save appointment or when we create a session for the payment
+ *       404:
+ *         description: If this slot not found with this id or if it's already booked
+ *       403:
+ *         description: If the token was invalid
+ */
 export const bookAppointment = async (req: Request, res: Response) => {
   const slotID = req.params.slotID as string;
   const patientID = req.user?.id;
@@ -15,7 +53,7 @@ export const bookAppointment = async (req: Request, res: Response) => {
     throw new AppError(400, "Slot ID is required!");
   }
   if (!patientID) {
-    throw new AppError(400, "User ID is required!");
+    throw new AppError(401, "User ID is required!");
   }
   const getSlot = await DocSlot.findOneAndUpdate(
     { _id: slotID, isBooked: false },
@@ -77,6 +115,68 @@ export const bookAppointment = async (req: Request, res: Response) => {
   }
 };
 
+/**
+ * @swagger
+ * /appointment/my-appointments:
+ *   get:
+ *     summary: Get all my appointments with pagination and search
+ *     tags: [Appointments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Page number for pagination
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *         description: Number of limit per page
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *           example: "2026-10-16"
+ *         description: Search by appointment date, doctor name or doctor email.
+ *     responses:
+ *       200:
+ *         description: All appointments that retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "fetched your appointments successfully"
+ *                 results:
+ *                   type: integer
+ *                   example: 1
+ *                 total:
+ *                   type: integer
+ *                   example: 1
+ *                 totalPages:
+ *                   type: integer
+ *                   example: 1
+ *                 page:
+ *                   type: integer
+ *                   example: 1
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Unauthenticated
+ *       403:
+ *         description: Forbidden, token was invalid
+ */
 export const getMyAppointment = async (req: Request, res: Response) => {
   const patientID = req.user?.id as string;
   if (!patientID) {
@@ -147,6 +247,45 @@ export const getMyAppointment = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /appointment/cancel-appointment/{appointmentId}:
+ *   post:
+ *     summary: Cancel an appointment by ID
+ *     tags: [Appointments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: appointmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "6aa9d8cf51da0972b69ead8a"
+ *         description: Appointment id to find in db
+ *     responses:
+ *       200:
+ *         description: Appointment cancelled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "the appointment has been cancelled successfully"
+ *       400:
+ *         description: Bad request (invalid ID, already cancelled, or completed)
+ *       401:
+ *         description: Unauthenticated, token missing or invalid
+ *       403:
+ *         description: Forbidden, accesstoken was invalid or if this appointment was for another patient
+ *       404:
+ *         description: Appointment not found
+ */
 export const cancelAppointment = async (req: Request, res: Response) => {
   const patientID = req.user?.id;
   const appointmentID = req.params.appointmentId as string;

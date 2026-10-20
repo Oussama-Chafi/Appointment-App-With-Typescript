@@ -2,8 +2,38 @@ import { response, type Request, type Response } from "express";
 import { AppError } from "../utils/AppError.js";
 import User from "../models/userSchema.js";
 import bcrypt from "bcrypt";
-import { updateUserVali } from "../validation/userValidation.js";
 
+/**
+ * @swagger
+ * /profile:
+ *   get:
+ *     summary: Get profile
+ *     tags: [user]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: "Profile found"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Your account profile"
+ *                 data:
+ *                   type: object
+ *       401:
+ *         description: Unauthenticated
+ *       404:
+ *         description: User profile not found
+ *       403:
+ *         descreption: accessToken is invalid
+ */
 export const getProfile = async (req: Request, res: Response) => {
   const userID = req.user?.id as string;
   if (!userID) {
@@ -22,6 +52,67 @@ export const getProfile = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /profile/update-profile:
+ *   patch:
+ *     summary: Update profile of the user
+ *     tags: [user]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - first_name
+ *               - last_name
+ *               - email
+ *               - phone
+ *               - gender
+ *             properties:
+ *               first_name:
+ *                 type: string
+ *                 example: "update_first_name"
+ *               last_name:
+ *                 type: string
+ *                 example: "update_last_name"
+ *               email:
+ *                 type: string
+ *                 example: "update_email"
+ *               phone:
+ *                 type: string
+ *                 example: "1234567890"
+ *               gender:
+ *                 type: string
+ *                 example: "Male"
+ *     responses:
+ *       200:
+ *         description: "Profile updated successfully"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "User profile updated successfully"
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: If user doesn't update anything
+ *       401:
+ *         description: Unauthenticated, token missing
+ *       403:
+ *         description: Access token is invalid
+ *       404:
+ *         description: If user profile not found
+ */
 export const updateProfile = async (req: Request, res: Response) => {
   const userID = req.user?.id as string;
   const { first_name, last_name, email, phone, gender } = req.body;
@@ -48,6 +139,57 @@ export const updateProfile = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /profile/change-password:
+ *   patch:
+ *     summary: Change the password
+ *     tags: [user]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - oldPassword
+ *               - newPassword
+ *               - confirmNewPass
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *                 example: "12345678"
+ *               newPassword:
+ *                 type: string
+ *                 example: "87654321"
+ *               confirmNewPass:
+ *                 type: string
+ *                 example: "87654321"
+ *     responses:
+ *       200:
+ *         description: "Password has been changed successfully"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 messsage:
+ *                   type: string
+ *                   example: "The password has been changed successfully"
+ *       400:
+ *         description: confirmation was not correct, the old password wasn't correct,
+ *       401:
+ *         description:  Unauthenticated, token missing
+ *       404:
+ *         description: If account not found
+ *       403:
+ *         description: accessToken is invalid
+ */
 export const changePassword = async (req: Request, res: Response) => {
   const { oldPassword, newPassword, confirmNewPass } = req.body;
   if (newPassword !== confirmNewPass) {
@@ -79,6 +221,46 @@ export const changePassword = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /profile/delete-account:
+ *   delete:
+ *     summary: Delete the account
+ *     tags: [user]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 example: "12345678"
+ *     responses:
+ *       204:
+ *         description: Account has been deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *       400:
+ *         description: If password is missing , if passowrd wasn't correct
+ *       404:
+ *         description: If account not found
+ *       401:
+ *         description: Unauthenticated, token missing
+ *       403:
+ *         description: Forbidden, accessToken is invaild
+ */
 export const deleteAccount = async (req: Request, res: Response) => {
   const password = req.body.password as string;
   if (!password) {
@@ -96,17 +278,58 @@ export const deleteAccount = async (req: Request, res: Response) => {
   if (!comparePasswords) {
     throw new AppError(400, "The password is not correct");
   }
-  const deleteAccount = await User.findByIdAndDelete(userID);
-  if (!deleteAccount) {
-    throw new AppError(404, "Account profile not found.");
-  }
+  await User.findByIdAndDelete(userID);
+
   res.status(204).json({ success: true });
 };
 
+/**
+ * @swagger
+ * /profile/logout-all:
+ *   patch:
+ *     summary: Logout from all devices
+ *     tags: [user]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - password
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 example: "12345678"
+ *     responses:
+ *       200:
+ *         description: Logged out from all devices successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Logged out from all devices successfully"
+ *       400:
+ *         description: If password is missing , if passowrd wasn't correct
+ *       404:
+ *         description: If account not found
+ *       401:
+ *         description: Unauthenticated, token missing
+ *       403:
+ *         description: Forbidden, accessToken is invaild
+ */
 export const logoutAllDevices = async (req: Request, res: Response) => {
   const password = req.body.password as string;
   if (!password) {
-    throw new AppError(400, "the password is not correct");
+    throw new AppError(400, "the password is missing");
   }
   const userID = req.user?.id;
   if (!userID) {

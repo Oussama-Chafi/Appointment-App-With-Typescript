@@ -22,6 +22,7 @@ import imagesRoute from "./routes/imagesRoute.js";
 import userRoute from "./routes/userRoute.js";
 import { authLimiter, globalLimiter } from "./middlewares/rateLimiter.js";
 import { initCronJobs } from "./utils/cronJobs.js";
+import { swaggerDocs } from "./utils/swagger.js";
 
 export const app = express();
 const PORT = process.env.PORT || 5000;
@@ -50,6 +51,7 @@ app.use("/reviews", reviewsRoute);
 app.use("/payment", paymentRoute);
 app.use("/images", imagesRoute);
 app.use("/profile", userRoute);
+swaggerDocs(app , Number(PORT));
 app.use(notFoundPage);
 
 mongoose.connection.once("open", () => {

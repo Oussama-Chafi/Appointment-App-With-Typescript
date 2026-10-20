@@ -1,4 +1,12 @@
-import { describe, beforeAll, beforeEach, afterAll, it, expect, jest } from "@jest/globals";
+import {
+  describe,
+  beforeAll,
+  beforeEach,
+  afterAll,
+  it,
+  expect,
+  jest,
+} from "@jest/globals";
 import mongoose from "mongoose";
 import request from "supertest";
 import { app } from "../src/server";
@@ -13,7 +21,6 @@ describe("Appointments API Integration Tests", () => {
   let unavaiSlotID: string;
   let doctorID: string;
 
-  // 1. الاتصال بقاعدة البيانات مرة واحدة قبل بدء كل الاختبارات
   beforeAll(async () => {
     if (mongoose.connection.readyState !== 0) {
       await mongoose.disconnect();
@@ -24,7 +31,6 @@ describe("Appointments API Integration Tests", () => {
     await mongoose.connect(testMongoUri);
   }, 30000);
 
-  // 2. تنظيف وإعادة تهيئة البيانات قبل كل اختبار لضمان عدم تداخل الحالة (State Leakage)
   beforeEach(async () => {
     await Appointment.deleteMany({});
     await User.deleteMany({});
@@ -81,7 +87,7 @@ describe("Appointments API Integration Tests", () => {
     doctorID = addDoctor._id?.toString();
     avaiSlotID = avaiSlot._id.toString();
     unavaiSlotID = unavaiSlot._id.toString();
-  } , 30000);
+  }, 30000);
 
   afterAll(async () => {
     await mongoose.connection.close();

@@ -1,9 +1,4 @@
-import {
-  response,
-  type NextFunction,
-  type Request,
-  type Response,
-} from "express";
+import { type NextFunction, type Request, type Response } from "express";
 import {
   loginValidation,
   registerValidation,
@@ -15,6 +10,46 @@ import jwt, { type JwtPayload, type VerifyErrors } from "jsonwebtoken";
 import type { CustomPayload } from "../types/app.js";
 import crypto from "crypto";
 import sendEmail from "../utils/SendEmail.js";
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a user and send verify token on email
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - first_name
+ *               - last_name
+ *               - email
+ *               - password
+ *             properties:
+ *               first_name:
+ *                 type: stirng
+ *                 example: "user_first_name"
+ *               last_name:
+ *                 type: string
+ *                 example: "user_last_name"
+ *               email:
+ *                 type: string
+ *                 example: "user@example.com"
+ *               password:
+ *                 type: string
+ *                 example: "12345678"
+ *     responses:
+ *       201:
+ *         description: Register successful and verify token has been sent
+ *       400:
+ *         description: All fiedls are required
+ *       409:
+ *         description: This account already exist
+ *       429:
+ *         description: If the user send mor than five requests (rate limit)
+ */
 export const register = async (req: Request, res: Response) => {
   const { error, value } = registerValidation.validate(req.body);
   if (error) {
@@ -72,6 +107,36 @@ export const register = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Login a user and return JWT token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: "user@example.com"
+ *               password:
+ *                 type: string
+ *                 example: "12345678"
+ *     responses:
+ *       200:
+ *         description: Login successful and token returned
+ *       400:
+ *         description: Invalid email or password
+ *       429:
+ *         description: If the user send mor than five requests (rate limit)
+ */
 export const login = async (req: Request, res: Response) => {
   const { error, value } = loginValidation.validate(req.body);
   if (error) {
@@ -138,6 +203,31 @@ export const login = async (req: Request, res: Response) => {
   });
 };
 
+/**
+ * @swagger
+ * /auth/refresh:
+ *   get:
+ *     summary: Get new access token using refresh token
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: New access token generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                   example: "eyjaweojfafalfjwoasifw..."
+ *       401:
+ *         description: Refresh token not found in cookies or expired
+ *       403:
+ *         description: Invalid refresh token
+ *       429:
+ *         description: If the user send mor than five requests (rate limit)
+ */
+
 export const refresh = async (
   req: Request,
   res: Response,
@@ -199,6 +289,19 @@ export const refresh = async (
     },
   );
 };
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout and romove JWT token from cookies
+ *     tags: [Auth]
+ *     responses:
+ *       204:
+ *         description: Logout successful and JWT token has been removed
+ *       429:
+ *         description: If the user send mor than five requests (rate limit)
+ */
 
 export const logout = (req: Request, res: Response) => {
   const cookies = req.cookies;

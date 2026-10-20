@@ -4,6 +4,44 @@ import { Types } from "mongoose";
 import Appointment from "../models/appointmentSchema.js";
 import { getStripeInstance } from "../config/stripe.js";
 
+/**
+ * @swagger
+ * /payment/checkout-session/{appointmentId}:
+ *   post:
+ *     summary: Create a Stripe checkout session for an appointment payment
+ *     tags: [Payment]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: appointmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the appointment to pay for
+ *     responses:
+ *       200:
+ *         description: Checkout session created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 url:
+ *                   type: string
+ *                   example: "https://checkout.stripe.com/c/pay/cs_test_..."
+ *       400:
+ *         description: Valid Appointment ID is required
+ *       401:
+ *         description: You are unauthenticated
+ *       403:
+ *         description: You can't pay this appointment (Unauthorized user)
+ *       404:
+ *         description: No appointment exist with this ID
+ */
 export const createCheckoutSession = async (req: Request, res: Response) => {
   const appointmentID = req.params.appointmentId as string;
   if (!appointmentID || !Types.ObjectId.isValid(appointmentID)) {
