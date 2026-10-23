@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+@theme{
+  --nav-dark-bg-color : #112;
+  --header-dark-bg-color: #113;
+  --primary-color: #5F6FFF;
+  --more-doctors-bg-button: #EAEFFF; 
+}
+
+@custom-variant dark (&:where(.dark , .dark *));
