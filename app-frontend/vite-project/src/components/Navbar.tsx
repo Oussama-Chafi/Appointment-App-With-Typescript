@@ -99,7 +99,10 @@ const Navbar = () => {
           <div className="flex items-center justify-between mx-2 mb-4 font-semibold ">
             <p className="text-lg p-1">Theme</p>
             <button
-              onClick={() => setTheme((p) => !p)}
+              onClick={() => {
+                setTheme((p) => !p);
+                setIsOpen(false);
+              }}
               className="cursor-pointer p-1"
             >
               {theme ? (
