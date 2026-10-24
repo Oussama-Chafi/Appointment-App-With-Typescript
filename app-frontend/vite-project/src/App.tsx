@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import MainLayouts from "./layouts/MainLayouts";
 import Home from "./pages/Home";
 import AllDoctors from "./pages/AllDoctors";
+import BookAppointment from "./pages/BookAppointment";
 
 function App() {
   return (
@@ -9,7 +10,8 @@ function App() {
       <Routes>
         <Route element={<MainLayouts />}>
           <Route path="/" element={<Home />} />
-          <Route path={`all-doctors/:speciality?`} element ={<AllDoctors/>}/>
+          <Route path={`all-doctors/:speciality?`} element={<AllDoctors />} />
+          <Route path={`/doctor/:docId`} element={<BookAppointment />} />
         </Route>
       </Routes>
     </div>

@@ -20,7 +20,10 @@ const TopSpecialties = () => {
       <div className="flex flex-wrap justify-center gap-x-4 gap-y-8 sm:gap-x-6 lg:gap-x-10">
         {specialityData.map((element) => (
           <div
-            onClick={() => navigate(`/all-doctors/${element.speciality}`)}
+            onClick={() => {
+              navigate(`/all-doctors/${element.speciality}`);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
             key={element.speciality}
             className="flex w-24 cursor-pointer flex-col items-center gap-2 text-center transition-transform duration-300 hover:-translate-y-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:w-28 md:w-32"
           >

@@ -21,7 +21,10 @@ const TopDoctors = () => {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-6 xl:grid-cols-5">
         {doctors.slice(0, MAX_DOCTORS).map((element) => (
           <article
-            onClick={() => navigate(`/doctor/${element._id}`)}
+            onClick={() => {
+              navigate(`/doctor/${element._id}`);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
             key={element._id}
             className="cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white transition-transform duration-300 hover:-translate-y-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0 dark:border-slate-700 dark:bg-slate-800"
           >
@@ -59,7 +62,10 @@ const TopDoctors = () => {
         ))}
       </div>
       <button
-        onClick={() => navigate("/all-doctors")}
+        onClick={() => {
+          navigate("/all-doctors");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
         className="bg-(--more-doctors-bg-button) text-gray-800 rounded-full my-10 md:my-20 px-10 py-3 block mx-auto cursor-pointer hover:opacity-95"
       >
         more
