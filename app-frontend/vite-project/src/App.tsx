@@ -5,6 +5,7 @@ import AllDoctors from "./pages/AllDoctors";
 import BookAppointment from "./pages/BookAppointment";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import ApplyDoctor from "./pages/ApplyDoctor";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path={`/doctor/:docId`} element={<BookAppointment />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/app-to-be-doctor" element={<ApplyDoctor />} />
         </Route>
       </Routes>
     </div>
