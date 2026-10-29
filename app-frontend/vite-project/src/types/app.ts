@@ -23,3 +23,25 @@ export interface ApplyDoctorProps {
   submitted?: boolean;
   serverError?: string | null;
 }
+
+export interface SlotAvailabilityValues {
+  date: string;
+  startTime: string;
+  endTime: string;
+  price: number;
+  excludedSlots: string[];
+}
+export interface SchedulDay extends SlotAvailabilityValues {
+  id: string;
+}
+
+export interface SlotFormValues {
+  date: string;
+  startTime: string;
+  endTime: string;
+  price: string;
+}
+
+export type SlotFormError = Partial<
+  Record<keyof SlotFormValues | "slots", string>
+>;
