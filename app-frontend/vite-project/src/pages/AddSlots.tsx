@@ -8,6 +8,7 @@ import type {
   SlotFormError,
   SlotFormValues,
 } from "../types/app";
+import { useNavigate } from "react-router-dom";
 
 const SLOT_MINUTES = 60;
 
@@ -63,7 +64,15 @@ const AddSlots = ({
   scheduledDays = [
     {
       id: "1",
-      date: "2026-10-27",
+      date: "2026-10-30",
+      startTime: "09:00",
+      endTime: "12:00",
+      excludedSlots: ["10:00", "14:00"],
+      price: 50,
+    },
+    {
+      id: "2",
+      date: "2026-11-01",
       startTime: "09:00",
       endTime: "12:00",
       excludedSlots: ["10:00", "14:00"],
@@ -79,6 +88,7 @@ const AddSlots = ({
   const [excluded, setExcluded] = useState<string[]>([]);
   const [errors, setErrors] = useState<SlotFormError>({});
 
+  const navigate = useNavigate();
   const slots = generateSlots(values.startTime, values.endTime);
   // Ignore excluded times that are outside the current time range
   const validExcluded = excluded.filter((t) => slots.includes(t));
@@ -271,7 +281,7 @@ const AddSlots = ({
 
       {/* Scheduled days */}
       <div className="mt-8 rounded-xl border border-slate-200 bg-white px-5 dark:border-slate-700 dark:bg-slate-800/50">
-        <h3 className="pt-4 text-base font-semibold">Your scheduled days</h3>
+        <h3 className="pt-4 text-base font-semibold border-b p-2">Your scheduled days</h3>
 
         {scheduledDays.length === 0 ? (
           <p className="py-4 text-sm text-slate-500 dark:text-slate-400">
@@ -284,7 +294,13 @@ const AddSlots = ({
               .map((day) => (
                 <li
                   key={day.id}
-                  className="flex flex-wrap items-center gap-3 py-4"
+                  className="flex flex-wrap items-center gap-3 py-4 cursor-pointer"
+                  onClick={() => (
+                    navigate("/doctors/my-slots", {
+                      state: { date: day.date },
+                    }),
+                    scrollTo({ top: 0, behavior: "smooth" })
+                  )}
                 >
                   <div className="min-w-40 flex-1">
                     <p className="text-sm font-medium">

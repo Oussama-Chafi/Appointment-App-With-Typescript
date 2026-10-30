@@ -45,3 +45,26 @@ export interface SlotFormValues {
 export type SlotFormError = Partial<
   Record<keyof SlotFormValues | "slots", string>
 >;
+
+export interface Slot {
+  _id: string;
+  date: string; // "2026-10-30"
+  startTime: string; // "09:00"
+  endTime: string; // "10:00"
+  price: number;
+  isBooked: boolean;
+}
+
+export interface MySlotsProps {
+  slots?: Slot[];
+  isLoading?: boolean;
+  error?: string | null;
+}
+
+export type Filter = "all" | "available" | "booked";
+
+export interface DaySlots {
+  date: string;
+  slots: Slot[];
+  bookedCount: number;
+}

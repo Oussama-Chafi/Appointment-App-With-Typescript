@@ -7,6 +7,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import ApplyDoctor from "./pages/ApplyDoctor";
 import AddSlots from "./pages/AddSlots";
+import MySlots from "./pages/MySlots";
 
 function App() {
   return (
@@ -19,7 +20,8 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/app-to-be-doctor" element={<ApplyDoctor />} />
-          <Route path="/add-slots" element={<AddSlots />} />
+          <Route path="/doctors/add-slots" element={<AddSlots />} />
+          <Route path="/doctors/my-slots" element={<MySlots />} />
         </Route>
       </Routes>
     </div>
