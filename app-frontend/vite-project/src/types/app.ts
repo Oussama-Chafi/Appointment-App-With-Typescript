@@ -121,9 +121,61 @@ export interface DoctorAppointmentsProps {
   onReject?: (id: string) => void;
 }
 
-export interface SearchInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  className?: string;
+export type DoctorStatus = "pending" | "approved" | "rejected";
+
+export interface Doctor {
+  _id: string;
+  userID: {
+    _id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string | null;
+    gender?: string | null;
+    avatar?: string | null;
+  };
+  phone: string; // the doctor's practice phone
+  specialty: string;
+  address: string;
+  consultationFee: number;
+  bio?: string | null;
+  isAcceptingAppointments: boolean;
+  status: DoctorStatus;
+  averageRating: number;
+  numOfReviews: number;
 }
+
+export interface UpdateDoctorPayload {
+  specialty?: string;
+  address?: string;
+  consultationFee?: number;
+  isAcceptingAppointments?: boolean;
+  bio?: string;
+  email?: string;
+  phone?: string; // the user's personal phone
+  doctorPhone?: string; // the doctor's practice phone
+}
+
+export interface DoctorProfileProps {
+  doctor?: Doctor | null;
+  isLoading?: boolean;
+  error?: string | null;
+  // Return a promise (for example await dispatch(...).unwrap()) so the form
+  // can close on success and show the error if the request fails
+  onSave?: (payload: UpdateDoctorPayload) => Promise<void> | void;
+}
+
+export interface UpdateProfileFormValues {
+  specialty: string;
+  address: string;
+  consultationFee: string;
+  isAcceptingAppointments: boolean;
+  bio: string;
+  email: string;
+  phone: string;
+  doctorPhone: string;
+}
+
+export type UpdateProfileFormErrors = Partial<
+  Record<keyof UpdateProfileFormValues, string>
+>;

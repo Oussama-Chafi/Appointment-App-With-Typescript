@@ -9,6 +9,7 @@ import ApplyDoctor from "./pages/ApplyDoctor";
 import AddSlots from "./pages/AddSlots";
 import MySlots from "./pages/MySlots";
 import DoctorAppointments from "./pages/DoctorAppointment";
+import DoctorProfile from "./pages/DoctorProfile";
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
             path="/doctors/my-appointments"
             element={<DoctorAppointments />}
           />
+          <Route path="/doctors/doctor-profile" element={<DoctorProfile />} />
         </Route>
       </Routes>
     </div>

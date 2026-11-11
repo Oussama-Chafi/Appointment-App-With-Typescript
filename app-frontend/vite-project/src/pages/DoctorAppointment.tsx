@@ -5,11 +5,11 @@ import type {
   Appointment,
   AppointmentStatus,
   DoctorAppointmentsProps,
-  SearchInputProps,
   StatusFilter,
 } from "../types/app";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import AppointmentCard from "../components/AppointmentCard";
+import SearchInput from "../components/SearchInput";
 
 const APPOINTMENTS_PER_PAGE = 10;
 
@@ -23,27 +23,6 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "all", label: "All" },
 ];
 
-const SearchInput = ({
-  value,
-  onChange,
-  placeholder = "Search...",
-  className = "",
-}: SearchInputProps) => (
-  <div className={`relative w-full ${className}`}>
-    <Search
-      aria-hidden="true"
-      className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 dark:text-slate-500"
-    />
-    <input
-      type="search"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      aria-label={placeholder}
-      className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/30 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
-    />
-  </div>
-);
 
 const DoctorAppointments = ({
   appointments = [],
@@ -153,7 +132,7 @@ const DoctorAppointments = ({
   };
 
   return (
-    <section className="mx-2 my-8 text-slate-900 md:mx-8 md:my-12 lg:mx-15 dark:text-white">
+    <section className="mx-2 my-8 text-slate-900 md:mx-8 md:my-12 lg:mx-15 dark:text-white min-h-screen">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-2xl font-bold md:text-3xl">Appointments</h2>
         {total !== undefined && (
@@ -168,7 +147,7 @@ const DoctorAppointments = ({
         <SearchInput
           value={searchInput}
           onChange={setSearchInput}
-          placeholder="Search by patient name"
+          placeholder="Search by patient name or date"
         />
       </form>
 
