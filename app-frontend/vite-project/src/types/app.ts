@@ -69,36 +69,52 @@ export interface DaySlots {
   bookedCount: number;
 }
 
-export interface Appointment {
-  _id: string;
-  patientID: {
-    _id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-    avatar?: string | null;
-  };
-  slotID: {
-    _id: string;
-    date: string; // "2026-11-06"
-    startTime: string; // "11:00"
-    endTime: string; // "12:00"
-  };
-  status: AppointmentStatus;
-  price: number;
-  paymentStatus: string;
-  notes?: string | null;
-}
-
 export type AppointmentStatus =
   | "pending"
   | "confirmed"
   | "completed"
-  | "rejected";
+  | "rejected"
+  | "cancelled";
+
+interface BasicAppointment {
+  success: boolean;
+  message?: string;
+  results: number;
+  total: number;
+  page: number;
+  totalPages: number;
+  slotID: {
+    _id: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+  };
+  status: AppointmentStatus;
+  price: number;
+  payment: boolean;
+  paymentIntentId?: string | null;
+  paymentStatus: "pending" | "paid" | "faild" | "refunded";
+  notes?: string | null;
+}
+interface Person {
+  _id?: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  gender: "male" | "female" | null;
+  avatar: string;
+}
+export interface DoctorAppointment extends BasicAppointment {
+  _id: string;
+  patientID: Person;
+  doctorID: string;
+}
+
 export type StatusFilter = AppointmentStatus | "all";
 
 export interface AppointmentCardProps {
-  appointment: Appointment;
+  appointment: DoctorAppointment;
   isActing: boolean;
   isConfirming: boolean;
   onAccept: () => void;
@@ -109,7 +125,7 @@ export interface AppointmentCardProps {
 }
 
 export interface DoctorAppointmentsProps {
-  appointments?: Appointment[];
+  appointments?: DoctorAppointment[];
   totalPages?: number;
   total?: number;
   isLoading?: boolean;
@@ -179,3 +195,39 @@ export interface UpdateProfileFormValues {
 export type UpdateProfileFormErrors = Partial<
   Record<keyof UpdateProfileFormValues, string>
 >;
+
+export type TabFilter = "upcoming" | "completed" | "cancelled" | "all";
+
+export interface UserAppointments extends BasicAppointment {
+  _id: string;
+  doctorID: {
+    _id: string;
+    userID: Person;
+    phone: string;
+    specialty: string;
+    address: string;
+    consultationFee: number;
+  };
+  patientID?: Person;
+}
+
+export interface UserAppointmentsCardProps {
+  appointment: UserAppointments;
+  isActing: boolean;
+  isConfirming: boolean;
+  onPay: () => void;
+  onAskCancel: () => void;
+  onConfirmCancel: () => void;
+  onKeep: () => void;
+}
+
+export interface MyAppointmentsProps {
+  appointments?: UserAppointments[];
+  totalPages?: number;
+  isLoading?: boolean;
+  error?: string | null;
+  actingId?: string | null; // id of the appointment whose request is running
+  onTabChange?: (tab: TabFilter) => void;
+  onPay?: (id: string) => void;
+  onCancel?: (id: string) => void;
+}

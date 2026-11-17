@@ -1,12 +1,6 @@
 import { Check, CheckCheck, Clock, X, type LucideIcon } from "lucide-react";
 import type { AppointmentCardProps, AppointmentStatus } from "../types/app";
-
-const formatDate = (date: string): string =>
-  new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+import { formatDate } from "../utils/formatDate";
 
 const getInitials = (name: string): string =>
   name
@@ -28,6 +22,7 @@ const STATUS_PILL: Record<
   confirmed: { label: "Confirmed", Icon: Check },
   completed: { label: "Completed", Icon: CheckCheck },
   rejected: { label: "Rejected", Icon: X },
+  cancelled: { label: "Cancelled", Icon: X },
 };
 
 const AppointmentCard = ({

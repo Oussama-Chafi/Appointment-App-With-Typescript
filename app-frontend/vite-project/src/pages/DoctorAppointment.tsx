@@ -2,7 +2,7 @@ import { useState, type SubmitEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import type {
-  Appointment,
+  DoctorAppointment,
   AppointmentStatus,
   DoctorAppointmentsProps,
   StatusFilter,
@@ -22,7 +22,6 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: "rejected", label: "Rejected" },
   { value: "all", label: "All" },
 ];
-
 
 const DoctorAppointments = ({
   appointments = [],
@@ -231,35 +230,48 @@ const STATUSES: AppointmentStatus[] = [
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-const fakeAppointments: Appointment[] = Array.from({ length: 23 }, (_, i) => {
-  const [first, last] = NAMES[i % NAMES.length];
-  const day = 6 + (i % 10);
-  const hour = 9 + (i % 6);
+const fakeAppointments: DoctorAppointment[] = Array.from(
+  { length: 23 },
+  (_, i) => {
+    const [first, last] = NAMES[i % NAMES.length];
+    const day = 6 + (i % 10);
+    const hour = 9 + (i % 6);
 
-  return {
-    _id: `a${i + 1}`,
-    patientID: {
-      _id: `p${i + 1}`,
-      first_name: first,
-      last_name: last,
-      email: `${first.toLowerCase()}@example.com`,
-      avatar: `https://ui-avatars.com/api/?name=${first}+${last}&background=random&color=fff&size=128`,
-    },
-    slotID: {
-      _id: `s${i + 1}`,
-      date: `2026-11-${pad(day)}`,
-      startTime: `${pad(hour)}:00`,
-      endTime: `${pad(hour + 1)}:00`,
-    },
-    status: STATUSES[i % STATUSES.length],
-    price: 50,
-    paymentStatus: i % 3 === 0 ? "paid" : "pending",
-    notes: i % 4 === 0 ? "Get well soon." : null,
-  };
-});
+    return {
+      success: true,
+      message: "fetched your appointments successfully",
+      page: 1,
+      results: 1,
+      total: 23,
+      totalPages: 3,
+      _id: `a${i + 1}`,
+      patientID: {
+        _id: `p${i + 1}`,
+        first_name: first,
+        last_name: last,
+        email: `${first.toLowerCase()}@example.com`,
+        avatar: `https://ui-avatars.com/api/?name=${first}+${last}&background=random&color=fff&size=128`,
+        gender: i % 2 === 0 ? "male" : "female",
+        phone: null,
+      },
+      slotID: {
+        _id: `s${i + 1}`,
+        date: `2026-11-${pad(day)}`,
+        startTime: `${pad(hour)}:00`,
+        endTime: `${pad(hour + 1)}:00`,
+      },
+      status: STATUSES[i % STATUSES.length],
+      price: 50,
+      paymentStatus: i % 3 === 0 ? "paid" : "pending",
+      notes: i % 4 === 0 ? "Get well soon." : null,
+      doctorID: `a${i + 2}`,
+      payment: i % 3 === 0 ? true : false,
+    };
+  },
+);
 
 const AppointmentsPage = () => {
-  const [all, setAll] = useState<Appointment[]>(fakeAppointments);
+  const [all, setAll] = useState<DoctorAppointment[]>(fakeAppointments);
   const [status, setStatus] = useState<StatusFilter>(DEFAULT_STATUS);
   const [params] = useSearchParams();
 
